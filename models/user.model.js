@@ -1,117 +1,155 @@
  
+// // import mongoose from "mongoose";
+
+// // const userSchema = new mongoose.Schema({
+// //     name :{
+// //         type : String,
+// //         required :[true,"Provide name"]
+// //     },
+// //     email :{
+// //         type: String,
+// //         required:[true,"provide email"]},
+
+// //     password :{
+// //         type :String,
+// //         required :[true,"provided password"]
+// //     },
+
+// //     avatar:{
+// //         type :String,
+// //         default:""
+// //     },
+
+// //     mobile :{
+// //         type:Number,
+// //         default: null
+// //     },
+// //     refresh_token :{
+// //         type:String,
+// //         default:""
+// //     },
+// //     verify_email:{
+// //         type :Boolean,
+// //         default :false
+// //     },
+// //     last_login_date:{
+// //         type :Date,
+// //         default:""
+// //     },
+// //     status:{
+// //         type :String,
+// //         enum:["Active","Inactive","Suspended"],
+// //         default:"Active"
+// //     },
+// //     address_details:[{
+// //         type:mongoose.Schema.ObjectId,
+// //         ref:'address'
+// //     }],
+// //     shopping_cart:[{
+// //         type:mongoose.Schema.ObjectId,
+// //         ref:'cartProduct'
+// //     }],
+// //     orderHistory:[{
+// //         type:mongoose.Schema.ObjectId,
+// //         ref :'order'
+// //     }
+// //     ],
+// //     forgot_password_otp :{
+// //         type :String,
+// //         default:null
+// //     },
+// //     forgot_password_expiry :{
+// //         type :Date,
+// //         default:""
+// //     },
+// //     role:{
+// //         type:String,
+// //         enum :['ADMIN',"USER"],
+// //         default :"USER"
+// //     }
+    
+// // },{
+// // timestamps:true
+// // })
+
+// // const UserModel =mongoose.model("User",userSchema)
+
+
+// // export default UserModel
+ 
 // import mongoose from "mongoose";
 
 // const userSchema = new mongoose.Schema({
-//     name :{
-//         type : String,
-//         required :[true,"Provide name"]
-//     },
-//     email :{
+//     name: {
 //         type: String,
-//         required:[true,"provide email"]},
-
-//     password :{
-//         type :String,
-//         required :[true,"provided password"]
+//         required: [true, "Provide name"]
 //     },
-
-//     avatar:{
-//         type :String,
-//         default:""
+//     email: {
+//         type: String,
+//         required: [true, "Provide email"]
 //     },
-
-//     mobile :{
-//         type:Number,
+//     password: {
+//         type: String,
+//         required: [true, "Provide password"]
+//     },
+//     avatar: {
+//         type: String,
+//         default: ""
+//     },
+//     mobile: {
+//         type: Number,
 //         default: null
 //     },
-//     refresh_token :{
-//         type:String,
-//         default:""
+//     refresh_token: {
+//         type: String,
+//         default: ""
 //     },
-//     verify_email:{
-//         type :Boolean,
-//         default :false
+//     verify_email: {
+//         type: Boolean,
+//         default: false
 //     },
-//     last_login_date:{
-//         type :Date,
-//         default:""
+//     last_login_date: {
+//         type: Date,
+//         default: ""
 //     },
-//     status:{
-//         type :String,
-//         enum:["Active","Inactive","Suspended"],
-//         default:"Active"
+//     status: {
+//         type: String,
+//         enum: ["Active", "Inactive", "Suspended"],
+//         default: "Active"
 //     },
-//     address_details:[{
-//         type:mongoose.Schema.ObjectId,
-//         ref:'address'
+//     role: {
+//         type: String,
+//         enum: ["ADMIN", "FARMER", "USER"],
+//         default: "USER"
+//     },
+//     address_details: [{
+//         type: mongoose.Schema.ObjectId,
+//         ref: 'address'
 //     }],
-//     shopping_cart:[{
-//         type:mongoose.Schema.ObjectId,
-//         ref:'cartProduct'
+//     shopping_cart: [{
+//         type: mongoose.Schema.ObjectId,
+//         ref: 'cartProduct'
 //     }],
-//     orderHistory:[{
-//         type:mongoose.Schema.ObjectId,
-//         ref :'order'
-//     }
-//     ],
-//     forgot_password_otp :{
-//         type :String,
-//         default:null
-//     },
-//     forgot_password_expiry :{
-//         type :Date,
-//         default:""
-//     },
-//     role:{
-//         type:String,
-//         enum :['ADMIN',"USER"],
-//         default :"USER"
-//     }
-    
-// },{
-// timestamps:true
-// })
+//     orderHistory: [{
+//         type: mongoose.Schema.ObjectId,
+//         ref: 'order'
+//     }]
+// }, { timestamps: true });
 
-// const UserModel =mongoose.model("User",userSchema)
+// const UserModel = mongoose.model("User", userSchema);
+// export default UserModel;
 
-
-// export default UserModel
- 
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: [true, "Provide name"]
-    },
-    email: {
-        type: String,
-        required: [true, "Provide email"]
-    },
-    password: {
-        type: String,
-        required: [true, "Provide password"]
-    },
-    avatar: {
-        type: String,
-        default: ""
-    },
-    mobile: {
-        type: Number,
-        default: null
-    },
-    refresh_token: {
-        type: String,
-        default: ""
-    },
-    verify_email: {
-        type: Boolean,
-        default: false
-    },
-    last_login_date: {
-        type: Date,
-        default: ""
-    },
+    name: { type: String, required: [true, "Provide name"] },
+    email: { type: String, required: [true, "Provide email"] },
+    password: { type: String, required: [true, "Provide password"] },
+    avatar: { type: String, default: "" },
+    mobile: { type: Number, default: null },
+    refresh_token: { type: String, default: "" },
+    verify_email: { type: Boolean, default: false },
+    last_login_date: { type: Date, default: "" },
     status: {
         type: String,
         enum: ["Active", "Inactive", "Suspended"],
@@ -122,18 +160,13 @@ const userSchema = new mongoose.Schema({
         enum: ["ADMIN", "FARMER", "USER"],
         default: "USER"
     },
-    address_details: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'address'
-    }],
-    shopping_cart: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'cartProduct'
-    }],
-    orderHistory: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'order'
-    }]
+    address_details: [{ type: mongoose.Schema.ObjectId, ref: 'address' }],
+    shopping_cart: [{ type: mongoose.Schema.ObjectId, ref: 'cartProduct' }],
+    orderHistory: [{ type: mongoose.Schema.ObjectId, ref: 'order' }],
+
+    forgot_password_otp: { type: String, default: null },
+    forgot_password_expiry: { type: Date, default: null }
+
 }, { timestamps: true });
 
 const UserModel = mongoose.model("User", userSchema);

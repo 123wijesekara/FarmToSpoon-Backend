@@ -324,7 +324,7 @@ export const createProductController = async (request, response) => {
         discount,
         description,
         more_details,
-        userId, // Add userId to the request body
+        userId, 
       } = request.body;
   
       if (!name || !location|| !image[0] || !category[0] || !subCategory[0] || !unit || !price || !description || !userId) {
@@ -347,7 +347,7 @@ export const createProductController = async (request, response) => {
         discount,
         description,
         more_details,
-        userId, // Save userId with the product
+        userId, 
       });
   
       const saveProduct = await product.save();
@@ -509,38 +509,133 @@ export const getProductController = async (request, response) => {
     }
   };
   
-  export const  getProductByCategory = async(request,response)=>{
+//   export const  getProductByCategory = async(request,response)=>{
 
-    try{
-        const { id } = request.body
-        if(!id){
+//     try{
+//         const { id } = request.body
+//         if(!id){
            
-                return response.status(400).json({
-                    message :"provide category id",
-                    error:true,
-                    success :false
-                })
+//                 return response.status(400).json({
+//                     message :"provide category id",
+//                     error:true,
+//                     success :false
+//                 })
             
-        }
-        const product = await ProductModel.find({
-            category : {$in :id}
-        }).limit(15)
+//         }
+//         const product = await ProductModel.find({
+//             category : {$in :id}
+//         }).limit(15)
         
-        return response.json({
-            message :"category product list",
-            data:product,
-            error:false,
-            success:true
-        })
+//         return response.json({
+//             message :"category product list",
+//             data:product,
+//             error:false,
+//             success:true
+//         })
 
-    } catch(error){
-        return response.status(500).json({
-            message :error.message || error,
-            error:true,
-            success :false
-        })
+//     } catch(error){
+//         return response.status(500).json({
+//             message :error.message || error,
+//             error:true,
+//             success :false
+//         })
+//     }
+// }
+
+// export const getProductByCategory = async (request, response) => {
+//   try {
+//     const { id, sortBy, sortOrder, district } = request.body;
+
+//     if (!id) {
+//       return response.status(400).json({
+//         message: "Provide category id",
+//         error: true,
+//         success: false
+//       });
+//     }
+
+//     let sortOptions = {};
+//     if (sortBy === 'price') {
+//       sortOptions.price = sortOrder === 'asc' ? 1 : -1;
+//     } else if (sortBy === 'district') {
+//       sortOptions.district = sortOrder === 'asc' ? 1 : -1;
+//     }
+
+//     const query = {
+//       category: { $in: id }
+//     };
+
+//     if (district) {
+//       query.district = district;
+//     }
+
+//     const product = await ProductModel.find(query)
+//       .sort(sortOptions)
+//       .limit(15);
+
+//     return response.json({
+//       message: "Category product list",
+//       data: product,
+//       error: false,
+//       success: true
+//     });
+
+//   } catch (error) {
+//     return response.status(500).json({
+//       message: error.message || error,
+//       error: true,
+//       success: false
+//     });
+//   }
+// };
+
+export const getProductByCategory = async (request, response) => {
+  try {
+    const { id, sortBy, sortOrder, district } = request.body;
+
+    if (!id) {
+      return response.status(400).json({
+        message: "Provide category id",
+        error: true,
+        success: false,
+      });
     }
-}
+
+    let sortOptions = {};
+    if (sortBy === 'price') {
+      sortOptions.price = sortOrder === 'asc' ? 1 : -1;
+    } else if (sortBy === 'district' || sortBy === 'location') {
+      sortOptions.location = sortOrder === 'asc' ? 1 : -1;
+    }
+
+    const query = {
+      category: { $in: id },
+    };
+
+    if (district) {
+      query.location = district; // or query.district if you add that field
+    }
+
+    const product = await ProductModel.find(query)
+      .sort(sortOptions)
+      .limit(15);
+
+    return response.json({
+      message: "Category product list",
+      data: product,
+      error: false,
+      success: true,
+    });
+
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+};
+
 
 export const getProductCategoryAndSubCategory = async(request,response)=>{
     try{
@@ -685,7 +780,7 @@ export const getProductDetails = async (request, response) => {
         });
       }
   
-      const product = await ProductModel.findOne({ _id, userId }); // Ensure the userId matches
+      const product = await ProductModel.findOne({ _id, userId }); 
   
       if (!product) {
         return response.status(404).json({
@@ -752,46 +847,45 @@ export const getProductDetails = async (request, response) => {
       });
     }
   };
-  export const searchProduct =async(request,response)=>{
-    try{
-        let {search,page,limit} = request.body
-if(!page){
-    page=1
-}
-if(!limit){
-    limit = 10
-}
+  export const searchProduct = async(request, response) => {
+    try {
+        let { search, page = 1, limit = 10 } = request.body;
 
-const query = search ?{
-    $text:{
-        $search :search
-    }
-}:{}
+        const query = search ? {
+            $or: [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+                // Add other fields you want to search
+            ]
+        } : {};
 
-const skip =(page-1)*limit
-const [data,dataCount] = await Promise.all([
-    ProductModel.find(query).sort({createdAt:-1}).skip(skip).limit(limit).populate('category subCategory'),
+        const skip = (page - 1) * limit;
+        
+        const [products, dataCount] = await Promise.all([
+            ProductModel.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate('category subCategory'),
+            ProductModel.countDocuments(query)
+        ]);
 
-    ProductModel.countDocuments(query)
-])
-return response.json({
-
-    message:"Product data",
-    error:false,
-    success:true,
-    totalCount:dataCount,
-    totalPage:Math.ceil(dataCount/limit),
-    page:page,
-    limit:limit,
-})
-     
-    }catch(error){
+        return response.json({
+            message: "Product data",
+            error: false,
+            success: true,
+            data: products,
+            totalCount: dataCount,
+            totalPage: Math.ceil(dataCount / limit),
+            page: page,
+            limit: limit
+        });
+         
+    } catch(error) {
         return response.status(500).json({
-            message :error.message || error,
-            error:true,
-            success :false
-        })
+            message: error.message || error,
+            error: true,
+            success: false
+        });
     }
 }
-      
-  
