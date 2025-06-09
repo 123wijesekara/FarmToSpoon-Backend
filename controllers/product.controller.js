@@ -480,8 +480,10 @@ export const getProductController = async (request, response) => {
         ? {
             $text: {
               $search: search,
+              
             },
-            userId, // Filter by userId
+          
+            userId,  
           }
         : { userId }; // Filter by userId if no search term
   
@@ -591,7 +593,7 @@ export const getProductController = async (request, response) => {
 
 export const getProductByCategory = async (request, response) => {
   try {
-    const { id, sortBy, sortOrder, district } = request.body;
+    const { id, sortBy, sortOrder, district, searchTerm } = request.body;
 
     if (!id) {
       return response.status(400).json({
@@ -608,12 +610,18 @@ export const getProductByCategory = async (request, response) => {
       sortOptions.location = sortOrder === 'asc' ? 1 : -1;
     }
 
+    // Build query object
     const query = {
       category: { $in: id },
     };
 
     if (district) {
-      query.location = district; // or query.district if you add that field
+      query.location = district; // adjust if your field is named differently
+    }
+
+    if (searchTerm && searchTerm.trim() !== '') {
+      // Use case-insensitive regex for matching product name or other fields
+      query.name = { $regex: searchTerm.trim(), $options: 'i' };
     }
 
     const product = await ProductModel.find(query)
@@ -635,6 +643,7 @@ export const getProductByCategory = async (request, response) => {
     });
   }
 };
+
 
 
 export const getProductCategoryAndSubCategory = async(request,response)=>{
@@ -739,8 +748,8 @@ export const getProductDetails = async (request, response) => {
       });
     }
 
-    // Find the product by productId and userId
-    const product = await ProductModel.findOne({ _id: productId, _id:userId }); // Filter by userId
+   
+    const product = await ProductModel.findOne({ _id: productId, _id:userId });  
 
     // Check if product is found
     if (!product) {

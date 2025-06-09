@@ -195,9 +195,9 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    userId: { // New field to store the user ID
+      userId: {  
       type: mongoose.Schema.ObjectId,
-      ref: "User",  // Replace 'user' with your actual model name if different
+      ref: "User",   
       required: true,
     },
   },

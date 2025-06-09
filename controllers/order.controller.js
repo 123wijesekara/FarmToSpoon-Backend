@@ -59,140 +59,140 @@ export const pricewithDiscount = (price,dis = 1)=>{
     return actualPrice
 }
 
-export async function paymentController(request,response){
-   try {
-    const userId = request.userId //auth middleware
-    const {list_items,totalAmt,addressId,subTotalAmt}=request.body
+// export async function paymentController(request,response){
+//    try {
+//     const userId = request.userId //auth middleware
+//     const {list_items,totalAmt,addressId,subTotalAmt}=request.body
 
-    const user = await  UserModel.findById(userId)
-    const line_items = list_items.map(item=>{
-        return{
-            price_data :{
-                currency :'inr',
-                product_data :{
-                    name:item.productId.name,
-                    images:item.productId.image,
-                    metadata:{
-                        productId:item.productId._id
-                    }
-                },
-                unit_amount : pricewithDiscount(item.productId.price,item.productId.discount)* 100
+//     const user = await  UserModel.findById(userId)
+//     const line_items = list_items.map(item=>{
+//         return{
+//             price_data :{
+//                 currency :'inr',
+//                 product_data :{
+//                     name:item.productId.name,
+//                     images:item.productId.image,
+//                     metadata:{
+//                         productId:item.productId._id
+//                     }
+//                 },
+//                 unit_amount : pricewithDiscount(item.productId.price,item.productId.discount)* 100
 
-            },
-            adjustable_quantity :{
-                enabled:true,
-                minimun:1
-            },
-            quantity :item.quantity
-        }
-    })
-    const params ={
-        submit_type :'pay',
-        mode :'payment',
-        payment_method_type :['card'],
-        customer_email :user.email,
-        metadata:{
-            userId:userId,
-            addressId:addressId
-        },
-        line_items:line_items,
-        success_url:`${process.env.FRONTEND_URL}/success`,
-        cancel_url:`${process.env.FRONTEND_URL}/cancel`
-    }
-const session = await Stripe.checkout.sessions.create(params)
+//             },
+//             adjustable_quantity :{
+//                 enabled:true,
+//                 minimun:1
+//             },
+//             quantity :item.quantity
+//         }
+//     })
+//     const params ={
+//         submit_type :'pay',
+//         mode :'payment',
+//         payment_method_type :['card'],
+//         customer_email :user.email,
+//         metadata:{
+//             userId:userId,
+//             addressId:addressId
+//         },
+//         line_items:line_items,
+//         success_url:`${process.env.FRONTEND_URL}/success`,
+//         cancel_url:`${process.env.FRONTEND_URL}/cancel`
+//     }
+// const session = await Stripe.checkout.sessions.create(params)
 
-return response.status(200).json(session)
-   }catch(error){
+// return response.status(200).json(session)
+//    }catch(error){
 
-return response.status(500).json({
-    message:error.message|| error,
-    error:true,
-    success : false
-})
-   }
+// return response.status(500).json({
+//     message:error.message|| error,
+//     error:true,
+//     success : false
+// })
+//    }
    
-}
+// }
 
-const getOrderProductItems =async(
-    lineItems,
-    userId,
-    addressId,
-    paymentId,
-    payment_status
+// const getOrderProductItems =async(
+//     lineItems,
+//     userId,
+//     addressId,
+//     paymentId,
+//     payment_status
 
-)=>{
-    const productList =[]
+// )=>{
+//     const productList =[]
 
-    if(lineItems?.data?.length){
-        for(const item of lineItems.data){
-            const product = await Stripe.products.retrieve(item.price.product)
+//     if(lineItems?.data?.length){
+//         for(const item of lineItems.data){
+//             const product = await Stripe.products.retrieve(item.price.product)
 
-            // console.log("item",item)
-            const  paylod = 
-            {
-                userId :userId ,
-                orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-                productId:product.metadata.productId,
-                product_details: {
-                    name :product.name,
-                    image :product.images,
-                },
-                paymentId:paymentId,
-                payment_status:payment_status,
-                delivery_address:addressId,
-                subTotalAmt: Number(item.amount_total/100),
-                totalAmt : Number(item.amount_total/100),
-            }
-            productList.push(paylod)
-        }
-    }
+//             // console.log("item",item)
+//             const  paylod = 
+//             {
+//                 userId :userId ,
+//                 orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+//                 productId:product.metadata.productId,
+//                 product_details: {
+//                     name :product.name,
+//                     image :product.images,
+//                 },
+//                 paymentId:paymentId,
+//                 payment_status:payment_status,
+//                 delivery_address:addressId,
+//                 subTotalAmt: Number(item.amount_total/100),
+//                 totalAmt : Number(item.amount_total/100),
+//             }
+//             productList.push(paylod)
+//         }
+//     }
 
-    return productList
-}
+//     return productList
+// }
 
-export async function webhookStripe(request,response){
-   const event =request.body;
+// export async function webhookStripe(request,response){
+//    const event =request.body;
 
-   const endPointSecret =process.env.STRIPE_ENDPOINT_WEBHOOK_SECRET_KEY
-   console.log("event",event)
+//    const endPointSecret =process.env.STRIPE_ENDPOINT_WEBHOOK_SECRET_KEY
+//    console.log("event",event)
 
-   switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
+//    switch (event.type) {
+//     case 'checkout.session.completed':
+//       const session = event.data.object;
 
-      const lineItems = await Stripe.checkout.sessions.listLineItems(session.id)
-const userId = session.metadata.userId
-      const orderProduct =await getOrderProductItems(
-        {
-        lineItems :lineItems,
-        userId:userId,
-        addressId: session.metadata.addressId,
-        paymentId:session.payment_intent,
-        payment_status:session.payment_status
-      }
+//       const lineItems = await Stripe.checkout.sessions.listLineItems(session.id)
+// const userId = session.metadata.userId
+//       const orderProduct =await getOrderProductItems(
+//         {
+//         lineItems :lineItems,
+//         userId:userId,
+//         addressId: session.metadata.addressId,
+//         paymentId:session.payment_intent,
+//         payment_status:session.payment_status
+//       }
         
-    )
-//  console.log("orderProduct",orderProduct)
+//     )
+// //  console.log("orderProduct",orderProduct)
 
-       const order = await OrderModel.insertMany(orderProduct)
+//        const order = await OrderModel.insertMany(orderProduct)
 
-       if(Boolean(order[0])){
-        const removeCartItems =  await UserModel.findByIdAndUpdate(userId,{
-           shopping_cart :[] 
-        })
-        const removeCartProductDB = await  CartProductModel.deleteMany( {userId : userId})
-       }
+//        if(Boolean(order[0])){
+//         const removeCartItems =  await UserModel.findByIdAndUpdate(userId,{
+//            shopping_cart :[] 
+//         })
+//         const removeCartProductDB = await  CartProductModel.deleteMany( {userId : userId})
+//        }
      
-      break; 
+//       break; 
      
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
+//     default:
+//       console.log(`Unhandled event type ${event.type}`);
+//   }
 
-  response.json({received: true});
+//   response.json({received: true});
 
  
-}
+// }
 
 export async function getOrderDetailsController(request,response) {
    

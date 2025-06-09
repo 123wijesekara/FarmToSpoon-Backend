@@ -964,7 +964,12 @@ export async function updateUserDetails(request, response) {
 export async function forgotPasswordController(request, response) {
     try {
         const { email } = request.body;
+       // console.log("➡️ sendTo received in sendEmail:", email);
+
+
         const user = await UserModel.findOne({ email });
+        
+
 
         if (!user) {
             return response.status(400).json({ message: "Email not available", error: true, success: false });
