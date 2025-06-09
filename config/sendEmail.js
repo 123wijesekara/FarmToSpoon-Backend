@@ -96,7 +96,7 @@ const sendEmail = async ({ name, sendTo, subject, html }) => {
  
     return data;
   } catch (error) {
-    console.error("❌ Unexpected error:", error);
+    console.error("Unexpected error:", error);
     return null;
   }
 };
