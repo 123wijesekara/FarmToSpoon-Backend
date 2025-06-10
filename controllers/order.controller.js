@@ -1,34 +1,50 @@
 import OrderModel from '../models/order.model.js';
 import UserModel from '../models/user.model.js';
 import mongoose from 'mongoose';
+import ProductModel from '../models/product.model.js';
 import { updateUserDetails } from './user.controller.js';
 import Stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartproduct.model.js";
+
   export async function CashOnDeliveryOrderController(request,response){
     try{
         const userId = request.userId
+      
   const {list_items,totalAmt,addressId,subTotalAmt}=request.body
-
+   
 //   console.log("list_items",list_items)
 //     console.log("totalAmt",totalAmt)
 //     console.log("addressId",addressId)
 //     console.log("subTotal",subTotalAmt)
-
+const user = await UserModel.findById(userId).lean();
+if (!user) {
+  return response.status(404).json({
+    message: "User not found",
+    success: false,
+    error: true,
+  });
+}
     const playload =list_items.map(el=>{
         return({
 
-    userId :userId ,
+    
+   
     orderId: `ORD-${new mongoose.Types.ObjectId()}`,
     productId:el.productId._id,
     product_details: {
+        _id: el.productId._id, 
         name :el.productId.name,
         image :el.productId.image,
+        userId: el.productId.userId,
+        
     },
     paymentId: "",
     payment_status:"CASH ON DELIVERY",
     delivery_address: addressId,
     subTotalAmt: subTotalAmt,
-    totalAmt : totalAmt
+    totalAmt : totalAmt,
+    userName: user.name,  
+    
         })
     })
 
@@ -214,3 +230,107 @@ return response.json({
         })
     }
 }
+
+
+export async function getFarmerOrdersController(req, res) {
+    try {
+      const farmerId = req.userId;
+  console.log("famer id",farmerId);
+      // Get product IDs owned by this farmer
+      const farmerProducts = await ProductModel.find({ userId: farmerId }, "_id");
+      const farmerProductIds = farmerProducts.map(p => new mongoose.Types.ObjectId(p._id));
+
+  
+      // Find orders that include these products
+      const farmerOrders = await  OrderModel.find({ "product_details._id": { $in: farmerProductIds.map(id => id.toString()) } })
+
+      .sort({ createdAt: -1 })
+      .populate("delivery_address")
+      .lean();
+  
+      return res.json({
+        message: "Orders for farmer",
+        data: farmerOrders,
+        success: true,
+        error: false
+      });
+      
+    } catch (error) {
+        
+      return res.status(500).json({
+        message: error.message || error,
+        success: false,
+        error: true
+      });
+    }
+  }
+
+  export async function getBuyerOrdersController(req, res) {
+    try {
+      const buyerId = req.userId;
+  
+      // Find orders placed by the logged-in buyer
+      const buyerOrders = await OrderModel.find({ userId: buyerId })
+        .sort({ createdAt: -1 })
+       
+        .lean();
+  
+      return res.json({
+        message: "Orders for buyer",
+        data: buyerOrders,
+        success: true,
+        error: false,
+      });
+  
+    } catch (error) {
+      return res.status(500).json({
+        message: error.message || "Server error",
+        success: false,
+        error: true,
+      });
+    }
+  }
+   
+
+ 
+
+  export async function updateOrderStatusController(req, res) {
+    try {
+      const { orderId, status } = req.body;
+  
+      if (!orderId || !status) {
+        return res.status(400).json({
+          message: "Order ID and new status are required",
+          success: false,
+          error: true,
+        });
+      }
+  
+      const updated = await OrderModel.findOneAndUpdate(
+        { _id: orderId }, 
+        { status },
+        { new: true }
+      );
+  
+      if (!updated) {
+        return res.status(404).json({
+          message: "Order not found",
+          success: false,
+          error: true,
+        });
+      }
+  
+      return res.json({
+        message: "Order status updated",
+        success: true,
+        error: false,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        message: err.message || err,
+        success: false,
+        error: true,
+      });
+    }
+  }
+  
