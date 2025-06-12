@@ -17,6 +17,8 @@ import CartProductModel from "../models/cartproduct.model.js";
 //     console.log("addressId",addressId)
 //     console.log("subTotal",subTotalAmt)
 const user = await UserModel.findById(userId).lean();
+
+ 
 if (!user) {
   return response.status(404).json({
     message: "User not found",
@@ -43,7 +45,9 @@ if (!user) {
     delivery_address: addressId,
     subTotalAmt: subTotalAmt,
     totalAmt : totalAmt,
-    userName: user.name,  
+    userName: user.name, 
+    Email:user.email,
+    PhoneNo:user.ContactNo
     
         })
     })

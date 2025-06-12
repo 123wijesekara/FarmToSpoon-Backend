@@ -507,7 +507,7 @@ import forgotPasswordTemplate from "../utils/forgotPassowordTemplate.js";
 export async function registerUserController(request, response) {
     try {
         const { name, email, password, phone, district, role } = request.body;  
-
+     
         // Role validation
         if (!role || !["ADMIN", "FARMER", "USER"].includes(role)) {
             return response.status(400).json({
@@ -536,7 +536,7 @@ export async function registerUserController(request, response) {
             name,
             email,
             password: hashedPassword,
-            phone, // Store phone
+            ContactNo:phone, // Store phone
             district, // Store district
             role, // Store role as 'user' or 'admin'
         });

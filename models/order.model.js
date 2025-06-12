@@ -13,6 +13,12 @@ const orderSchema = new mongoose.Schema({
     userName:{
         type:String
     },
+    Email:{
+        type:String
+    },
+    PhoneNo:{
+        type:Number
+    },
     product_details: {
         _id: String,
         name: String,
