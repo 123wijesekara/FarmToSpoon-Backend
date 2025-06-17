@@ -536,7 +536,7 @@ export async function registerUserController(request, response) {
             name,
             email,
             password: hashedPassword,
-            ContactNo:phone, // Store phone
+            mobile:phone, // Store phone
             district, // Store district
             role, // Store role as 'user' or 'admin'
         });

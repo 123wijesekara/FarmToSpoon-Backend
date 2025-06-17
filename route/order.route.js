@@ -14,7 +14,7 @@ orderRouter.get("/getFarmerOrdersController",auth,getFarmerOrdersController)
  
  
 orderRouter.put('/updateOrderStatus', auth, updateOrderStatusController);
-orderRouter.get('/updateBuyerOrderStatus', auth, getBuyerOrdersController);
+orderRouter.get('/updateBuyerOrderStatus',  getBuyerOrdersController);
  
 
 export default orderRouter

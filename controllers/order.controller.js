@@ -47,7 +47,7 @@ if (!user) {
     totalAmt : totalAmt,
     userName: user.name, 
     Email:user.email,
-    PhoneNo:user.ContactNo
+    mobile:user.mobile
     
         })
     })
@@ -219,13 +219,14 @@ export async function getOrderDetailsController(request,response) {
     try{
 const userId = request.userId
 const orderlist = await OrderModel.find({userId: userId}).sort({createdAt:-1}).populate('delivery_address')
-
+ 
 return response.json({
     message:"order list",
     data:orderlist,
     error:false,
     success:true
 })
+ 
     }catch(error){
         return response.status(500).json({
             message:error.message || error,
@@ -237,6 +238,7 @@ return response.json({
 
 
 export async function getFarmerOrdersController(req, res) {
+  
     try {
       const farmerId = req.userId;
   console.log("famer id",farmerId);
@@ -278,7 +280,7 @@ export async function getFarmerOrdersController(req, res) {
         .sort({ createdAt: -1 })
        
         .lean();
-  
+      
       return res.json({
         message: "Orders for buyer",
         data: buyerOrders,

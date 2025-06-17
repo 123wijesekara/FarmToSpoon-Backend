@@ -146,7 +146,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: [true, "Provide email"] },
     password: { type: String, required: [true, "Provide password"] },
     avatar: { type: String, default: "" },
-    ContactNo: { type: Number },
+    mobile: { type: Number },
     refresh_token: { type: String, default: "" },
     verify_email: { type: Boolean, default: false },
     last_login_date: { type: Date, default: "" },
