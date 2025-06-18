@@ -309,6 +309,7 @@
 
 import { request, response } from "express";
 import ProductModel from "../models/product.model.js";
+//import CartProductModel from "../models/cartproduct.model.js";
 
 export const createProductController = async (request, response) => {
     try {
@@ -591,6 +592,61 @@ export const getProductController = async (request, response) => {
 //   }
 // };
 
+// export const getProductByCategory = async (request, response) => {
+//   try {
+//     const { id, sortBy, sortOrder, district, searchTerm } = request.body;
+
+//     if (!id) {
+//       return response.status(400).json({
+//         message: "Provide category id",
+//         error: true,
+//         success: false,
+//       });
+//     }
+
+//     let sortOptions = {};
+//     if (sortBy === 'price') {
+//       sortOptions.price = sortOrder === 'asc' ? 1 : -1;
+//     } else if (sortBy === 'district' || sortBy === 'location') {
+//       sortOptions.location = sortOrder === 'asc' ? 1 : -1;
+//     }
+
+//     // Build query object
+//     const query = {
+//       category: { $in: id },
+//     };
+
+//     if (district) {
+//       query.location = district; // adjust if your field is named differently
+//     }
+
+//     if (searchTerm && searchTerm.trim() !== '') {
+//       // Use case-insensitive regex for matching product name or other fields
+//       query.name = { $regex: searchTerm.trim(), $options: 'i' };
+//     }
+
+//     const product = await ProductModel.find(query)
+//       .sort(sortOptions)
+//       .limit(15);
+
+//     return response.json({
+//       message: "Category product list",
+//       data: product,
+//       error: false,
+//       success: true,
+//     });
+
+//   } catch (error) {
+//     return response.status(500).json({
+//       message: error.message || error,
+//       error: true,
+//       success: false,
+//     });
+//   }
+// };
+
+ 
+
 export const getProductByCategory = async (request, response) => {
   try {
     const { id, sortBy, sortOrder, district, searchTerm } = request.body;
@@ -603,39 +659,80 @@ export const getProductByCategory = async (request, response) => {
       });
     }
 
-    let sortOptions = {};
-    if (sortBy === 'price') {
-      sortOptions.price = sortOrder === 'asc' ? 1 : -1;
-    } else if (sortBy === 'district' || sortBy === 'location') {
-      sortOptions.location = sortOrder === 'asc' ? 1 : -1;
-    }
-
-    // Build query object
+    // Step 1: Build base query
     const query = {
       category: { $in: id },
     };
 
     if (district) {
-      query.location = district; // adjust if your field is named differently
+      query.location = district;
     }
 
-    if (searchTerm && searchTerm.trim() !== '') {
-      // Use case-insensitive regex for matching product name or other fields
-      query.name = { $regex: searchTerm.trim(), $options: 'i' };
+    if (searchTerm && searchTerm.trim() !== "") {
+      query.name = { $regex: searchTerm.trim(), $options: "i" };
     }
 
-    const product = await ProductModel.find(query)
-      .sort(sortOptions)
-      .limit(15);
+    // Step 2: Fetch products matching the query
+    let products = await ProductModel.find(query);
+
+    // Step 3: Fetch cart quantities grouped by user and product
+    const cartItems = await CartProductModel.aggregate([
+      {
+        $group: {
+          _id: { productId: "$productId", userId: "$userId" },
+          totalQty: { $sum: "$quantity" }
+        }
+      }
+    ]);
+    console.log("Cart Items Aggregated:", JSON.stringify(cartItems, null, 2));
+    // Step 4: Prepare a Set of productIds to exclude
+    const excludeProductIds = new Set();
+
+    for (const product of products) {
+      const productIdStr = product._id.toString();
+
+      for (const cartItem of cartItems) {
+        const cartProductIdStr = cartItem._id.productId.toString();
+
+        if (productIdStr === cartProductIdStr && cartItem.totalQty >= product.stock) {
+          excludeProductIds.add(productIdStr);
+          break; // No need to check other users
+        }
+      }
+    }
+
+    // Step 5: Filter products
+    products = products.filter(
+      (product) => !excludeProductIds.has(product._id.toString())
+    );
+
+    // Step 6: Sort
+    let sortOptions = {};
+    if (sortBy === "price") {
+      sortOptions.price = sortOrder === "asc" ? 1 : -1;
+    } else if (sortBy === "district" || sortBy === "location") {
+      sortOptions.location = sortOrder === "asc" ? 1 : -1;
+    }
+
+    if (Object.keys(sortOptions).length > 0) {
+      products = products.sort((a, b) => {
+        const key = Object.keys(sortOptions)[0];
+        const order = sortOptions[key];
+        return order * ((a[key] || 0) - (b[key] || 0));
+      });
+    }
+
+    // Step 7: Limit to 15
+    products = products.slice(0, 15);
 
     return response.json({
       message: "Category product list",
-      data: product,
+      data: products,
       error: false,
       success: true,
     });
-
   } catch (error) {
+    console.error("Error in getProductByCategory:", error);
     return response.status(500).json({
       message: error.message || error,
       error: true,
@@ -643,7 +740,6 @@ export const getProductByCategory = async (request, response) => {
     });
   }
 };
-
 
 
 export const getProductCategoryAndSubCategory = async(request,response)=>{

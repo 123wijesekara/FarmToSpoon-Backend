@@ -1,6 +1,6 @@
 import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
-
+//import ProductModel from '../models/product.model.js';
 export const addToCartItemController = async (request, response) => {
     try {
         const userId = request.userId;
@@ -111,6 +111,71 @@ export const updateCartItemQtyController = async (request, response) => {
         });
     }
 };
+ 
+
+// export const updateCartItemQtyController = async (request, response) => {
+//     try {
+//         const userId = request.userId;
+//         const { _id, qty } = request.body;
+
+//         if (!_id || !qty) {
+//             return response.status(400).json({
+//                 message: "Provide _id and qty",
+//                 error: true,
+//                 success: false
+//             });
+//         }
+
+       
+//         const cartItem = await CartProductModel.findById(_id);
+//         if (!cartItem) {
+//             return response.status(404).json({
+//                 message: "Cart item not found",
+//                 error: true,
+//                 success: false
+//             });
+//         }
+
+        
+//         const product = await ProductModel.findById(cartItem.productId);
+//         if (!product) {
+//             return response.status(404).json({
+//                 message: "Product not found",
+//                 error: true,
+//                 success: false
+//             });
+//         }
+
+//         // Step 3: Compare stock with requested qty
+//         if (qty > product.stock) {
+//             return response.status(400).json({
+//                 message: `Only ${product.stock} item(s) available in stock`,
+//                 error: true,
+//                 success: false
+//             });
+//         }
+
+//         // Step 4: Update quantity in cart
+//         const updateCartItem = await CartProductModel.updateOne(
+//             { _id: _id },
+//             { quantity: qty }
+//         );
+
+//         return response.json({
+//             message: "Cart item updated",
+//             error: false,
+//             success: true,
+//             data: updateCartItem
+//         });
+//     } catch (error) {
+//         return response.status(500).json({
+//             message: error.message || error,
+//             error: true,
+//             success: false
+//         });
+//     }
+// };
+
 
 export const deleteCartItemQtyController = async (request, response) => {
     try {
