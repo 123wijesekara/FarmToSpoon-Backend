@@ -309,7 +309,7 @@
 
 import { request, response } from "express";
 import ProductModel from "../models/product.model.js";
-//import CartProductModel from "../models/cartproduct.model.js";
+import CartProductModel from "../models/cartproduct.model.js";
 
 export const createProductController = async (request, response) => {
     try {

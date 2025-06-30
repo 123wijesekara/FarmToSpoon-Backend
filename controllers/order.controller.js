@@ -300,6 +300,69 @@ export async function getFarmerOrdersController(req, res) {
 
  
 
+  // export async function updateOrderStatusController(req, res) {
+  //   try {
+  //     const { orderId, status } = req.body;
+  //     const io = req.app.get('io');
+
+  //     if (!orderId || !status) {
+  //       return res.status(400).json({
+  //         message: "Order ID and new status are required",
+  //         success: false,
+  //         error: true,
+  //       });
+  //     }
+  
+  //     const updated = await OrderModel.findOneAndUpdate(
+  //       { _id: orderId }, 
+  //       { status },
+  //       { new: true }
+  //     ).lean();
+  
+  //     if (!updated) {
+  //       return res.status(404).json({
+  //         message: "Order not found",
+  //         success: false,
+  //         error: true,
+  //       });
+  //     }
+  
+  //     if (io) {
+  //       // Notify buyer
+  //       io.to(updated.userId.toString()).emit('orderUpdate', {
+  //         orderId: updated._id,
+  //         status: updated.status,
+  //         message: `Your order status has been updated to ${updated.status}`
+  //       });
+        
+  //       // Notify farmer (product owner)
+  //       const product = await ProductModel.findById(updated.product_details._id);
+  //       if (product) {
+  //         io.to(product.userId.toString()).emit('orderUpdate', {
+  //           orderId: updated._id,
+  //           status: updated.status,
+  //           message: `Order #${updated._id.toString().slice(-6)} status updated to ${updated.status}`
+  //         });
+  //       }
+  //     }
+      
+  //     return res.json({
+  //       message: "Order status updated",
+  //       data: updated,
+  //       success: true,
+  //       error: false,
+  //     });
+  //   } catch (err) {
+  //     return res.status(500).json({
+  //       message: err.message || err,
+  //       success: false,
+  //       error: true,
+  //     });
+  //   }
+  // }
+  
+ 
+  
   export async function updateOrderStatusController(req, res) {
     try {
       const { orderId, status } = req.body;
@@ -312,11 +375,18 @@ export async function getFarmerOrdersController(req, res) {
         });
       }
   
+      // Update order and populate buyer and product owner info
       const updated = await OrderModel.findOneAndUpdate(
-        { _id: orderId }, 
+        { _id: orderId },
         { status },
         { new: true }
-      );
+      )
+        .populate('userId', '_id name email') // buyer info
+        .populate({
+          path: 'product_details._id',
+          model: 'product',
+          select: 'userId'
+        });
   
       if (!updated) {
         return res.status(404).json({
@@ -326,12 +396,52 @@ export async function getFarmerOrdersController(req, res) {
         });
       }
   
+      // Access WebSocket server from app locals
+      const wss = req.app.locals.wss;
+  
+      // Notify the buyer (user)
+      const buyerId = updated.userId?._id?.toString();
+      if (buyerId && wss?.sendToUser) {
+        wss.sendToUser(buyerId, {
+          type: 'ORDER_UPDATE',
+          data: {
+            orderId: updated._id,
+            status: updated.status,
+            message: `Your order status has been updated to ${updated.status}`
+          }
+        });
+      }
+  
+      // Notify the product owner (farmer/seller)
+      let productOwnerId = updated.product_details?._id?.userId;
+      // Fallback: If product owner is not populated, fetch manually
+      if (!productOwnerId) {
+        const productId = updated.product_details?._id?._id || updated.product_details?._id;
+        if (productId) {
+          const product = await ProductModel.findById(productId).select('userId');
+          productOwnerId = product?.userId;
+        }
+      }
+  
+      if (productOwnerId && wss?.sendToUser) {
+        wss.sendToUser(productOwnerId.toString(), {
+          type: 'ORDER_UPDATE',
+          data: {
+            orderId: updated._id,
+            status: updated.status,
+            message: `Order #${updated._id.toString().slice(-6)} status updated to ${updated.status}`
+          }
+        });
+      }
+  
       return res.json({
         message: "Order status updated",
         success: true,
         error: false,
       });
+  
     } catch (err) {
+      console.error("Error updating order status:", err);
       return res.status(500).json({
         message: err.message || err,
         success: false,
@@ -339,4 +449,3 @@ export async function getFarmerOrdersController(req, res) {
       });
     }
   }
-  

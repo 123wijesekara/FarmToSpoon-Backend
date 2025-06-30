@@ -544,7 +544,7 @@ export async function registerUserController(request, response) {
         // Save user to DB
         const savedUser = await newUser.save();
 
-        // Send email verification
+      
         const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${savedUser._id}`;
         const verifyEmail = await sendEmail({
             sendTo: email,
@@ -570,6 +570,7 @@ export async function registerUserController(request, response) {
 // Verify email controller
 export async function verifyEmailController(request, response) {
     try {
+        console.log("code",code);
         const { code } = request.body;
         const user = await UserModel.findOne({ _id: code });
 
