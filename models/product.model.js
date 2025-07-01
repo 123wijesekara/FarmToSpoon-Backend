@@ -151,6 +151,8 @@ const productSchema = new mongoose.Schema(
     location: {
       type: String,
     },
+    userName: String,        // seller name
+  mobile: String,
     image: {
       type: Array,
       default: [],

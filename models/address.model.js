@@ -10,16 +10,7 @@ const addressSchema= new mongoose.Schema({
         default:""
     },
 
-    state:{
-        type:String,
-        default:""
-    },
-    pincode:{
-        type :String
-    },
-    country :{
-        type :String
-    },
+ 
     mobile:{
         type:String,
         default:null

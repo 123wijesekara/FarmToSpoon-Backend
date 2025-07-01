@@ -309,65 +309,87 @@
 
 import { request, response } from "express";
 import ProductModel from "../models/product.model.js";
-//import CartProductModel from "../models/cartproduct.model.js";
-
+import CartProductModel from "../models/cartproduct.model.js";
+import UserModel from "../models/user.model.js";
 export const createProductController = async (request, response) => {
-    try {
-      const {
-        name,
-        location,
-        image,
-        category,
-        subCategory,
-        unit,
-        stock,
-        price,
-        discount,
-        description,
-        more_details,
-        userId, 
-      } = request.body;
-  
-      if (!name || !location|| !image[0] || !category[0] || !subCategory[0] || !unit || !price || !description || !userId) {
-        return response.status(400).json({
-          message: "Enter required fields",
-          error: true,
-          success: false,
-        });
-      }
-  
-      const product = new ProductModel({
-        name,
-        location,
-        image,
-        category,
-        subCategory,
-        unit,
-        stock,
-        price,
-        discount,
-        description,
-        more_details,
-        userId, 
-      });
-  
-      const saveProduct = await product.save();
-  
-      return response.json({
-        message: "Product created successfully",
-        data: saveProduct,
-        error: false,
-        success: true,
-      });
-    } catch (error) {
-      return response.status(500).json({
-        message: error.message || error,
+  try {
+    const {
+      name, // product name from frontend
+      location,
+      image,
+      category,
+      subCategory,
+      unit,
+      stock,
+      price,
+      discount,
+      description,
+      more_details,
+      userId,
+    } = request.body;
+
+    // Validate required fields
+    if (
+      !name ||
+      !location ||
+      !image?.[0] ||
+      !category?.[0] ||
+      !subCategory?.[0] ||
+      !unit ||
+      !price ||
+      !description ||
+      !userId
+    ) {
+      return response.status(400).json({
+        message: "Enter required fields",
         error: true,
         success: false,
       });
     }
-  };
 
+    // Fetch user's name and mobile using userId
+    const user = await UserModel.findById(userId).select('name mobile');
+    if (!user) {
+      return response.status(404).json({
+        message: "User not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    const product = new ProductModel({
+      name,                  // product name
+      userName: user.name,   // seller name
+      mobile: user.mobile, // seller mobile
+      location,
+      image,
+      category,
+      subCategory,
+      unit,
+      stock,
+      price,
+      discount,
+      description,
+      more_details,
+      userId,
+    });
+
+    const savedProduct = await product.save();
+
+    return response.json({
+      message: "Product created successfully",
+      data: savedProduct,
+      error: false,
+      success: true,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+};
 //   export const getProductController = async (request, response) => {
 //     try {
 //       let { page, limit, search, userId } = request.body; // Get userId from request body
