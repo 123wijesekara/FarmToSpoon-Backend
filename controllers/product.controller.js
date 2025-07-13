@@ -309,7 +309,7 @@
 
 import { request, response } from "express";
 import ProductModel from "../models/product.model.js";
-//import CartProductModel from "../models/cartproduct.model.js";
+import CartProductModel from "../models/cartproduct.model.js";
 
 export const createProductController = async (request, response) => {
     try {
@@ -660,6 +660,7 @@ export const getProductByCategory = async (request, response) => {
     }
 
     // Step 1: Build base query
+    
     const query = {
       category: { $in: id },
     };
@@ -684,7 +685,7 @@ export const getProductByCategory = async (request, response) => {
         }
       }
     ]);
-    console.log("Cart Items Aggregated:", JSON.stringify(cartItems, null, 2));
+    // console.log("Cart Items Aggregated:", JSON.stringify(cartItems, null, 2));
     // Step 4: Prepare a Set of productIds to exclude
     const excludeProductIds = new Set();
 
@@ -694,16 +695,17 @@ export const getProductByCategory = async (request, response) => {
       for (const cartItem of cartItems) {
         const cartProductIdStr = cartItem._id.productId.toString();
 
-        if (productIdStr === cartProductIdStr && cartItem.totalQty >= product.stock) {
+           // Changed logic: only exclude if product stock is 0
+        if (productIdStr === cartProductIdStr && product.stock <= 0) {
           excludeProductIds.add(productIdStr);
-          break; // No need to check other users
+          break;
         }
       }
     }
 
     // Step 5: Filter products
     products = products.filter(
-      (product) => !excludeProductIds.has(product._id.toString())
+      (product) => !excludeProductIds.has(product._id.toString()) && product.stock > 0
     );
 
     // Step 6: Sort
@@ -876,7 +878,7 @@ export const getProductDetails = async (request, response) => {
   export const updateProductDetails = async (request, response) => {
     try {
       const { _id, userId } = request.body;
-  
+      console.log("userId",userId)
       if (!_id || !userId) {
         return response.status(400).json({
           message: "Provide product id and userId",
@@ -926,7 +928,7 @@ export const getProductDetails = async (request, response) => {
         });
       }
   
-      const product = await ProductModel.findOne({ _id, userId }); // Ensure the userId matches
+      const product = await ProductModel.findOne({ _id, userId });  
   
       if (!product) {
         return response.status(404).json({
@@ -994,3 +996,40 @@ export const getProductDetails = async (request, response) => {
         });
     }
 }
+
+
+export const getAllProducts = async (req, res) => {
+  try {
+    const { userId } = req.body;  
+ 
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Provide userId",
+      });
+    }
+
+    // Find products related to userId
+    const products = await ProductModel.find({ userId })
+      .populate("category", "name")
+      .populate("subCategory", "name")
+      .lean();
+
+    const mapped = products.map(product => ({
+      _id: product._id,
+      name: product.name,
+      image: product.image,
+      stock: product.stock,
+      availableStock: product.stock,
+      isOutOfStock: product.stock === 0,
+      category: product.category,
+      subCategory: product.subCategory,
+      location: product.location || "",
+    }));
+
+    res.json({ success: true, data: mapped });
+  } catch (error) {
+    console.error("getAllProducts error:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};

@@ -5,7 +5,7 @@ export const addToCartItemController = async (request, response) => {
     try {
         const userId = request.userId;
         const { productId } = request.body;
-        
+
         if (!productId) {
             return response.status(400).json({
                 message: "Provide productId",
@@ -13,7 +13,7 @@ export const addToCartItemController = async (request, response) => {
                 success: false
             });
         }
-        
+
         // Check if product is already in the cart
         const checkProduct = await CartProductModel.findOne({
             userId: userId,
@@ -28,6 +28,28 @@ export const addToCartItemController = async (request, response) => {
             });
         }
 
+        // Find product and check stock
+        const product = await ProductModel.findById(productId);
+        if (!product) {
+            return response.status(404).json({
+                message: "Product not found",
+                error: true,
+                success: false
+            });
+        }
+
+        if (product.stock < 1) {
+            return response.status(400).json({
+                message: "Product out of stock",
+                error: true,
+                success: false
+            });
+        }
+
+        // Deduct 1 from stock
+        product.stock -= 1;
+        await product.save();
+
         // Add new item to cart
         const cartItem = new CartProductModel({
             quantity: 1,
@@ -38,7 +60,7 @@ export const addToCartItemController = async (request, response) => {
         const save = await cartItem.save();
 
         // Update user shopping cart
-        const updateCartUser = await UserModel.updateOne({ _id: userId }, {
+        await UserModel.updateOne({ _id: userId }, {
             $push: { shopping_cart: productId }
         });
 
@@ -56,6 +78,7 @@ export const addToCartItemController = async (request, response) => {
         });
     }
 };
+
 
 export const getCartItemController = async (request, response) => {
     try {
@@ -118,15 +141,14 @@ export const updateCartItemQtyController = async (request, response) => {
         const userId = request.userId;
         const { _id, qty } = request.body;
 
-        if (!_id || !qty) {
+        if (!_id || qty == null || qty < 1) {
             return response.status(400).json({
-                message: "Provide _id and qty",
+                message: "Provide valid _id and qty (min 1)",
                 error: true,
                 success: false
             });
         }
 
-       
         const cartItem = await CartProductModel.findById(_id);
         if (!cartItem) {
             return response.status(404).json({
@@ -136,7 +158,6 @@ export const updateCartItemQtyController = async (request, response) => {
             });
         }
 
-        
         const product = await ProductModel.findById(cartItem.productId);
         if (!product) {
             return response.status(404).json({
@@ -146,8 +167,12 @@ export const updateCartItemQtyController = async (request, response) => {
             });
         }
 
-        // Step 3: Compare stock with requested qty
-        if (qty > product.stock) {
+        const oldQty = cartItem.quantity;
+        const newQty = qty;
+        const diff = newQty - oldQty;
+
+        // If increasing quantity, ensure enough stock
+        if (diff > 0 && product.stock < diff) {
             return response.status(400).json({
                 message: `Only ${product.stock} item(s) available in stock`,
                 error: true,
@@ -155,21 +180,22 @@ export const updateCartItemQtyController = async (request, response) => {
             });
         }
 
-        // Step 4: Update quantity in cart
-        const updateCartItem = await CartProductModel.updateOne(
-            { _id: _id },
-            { quantity: qty }
-        );
+        // Update stock based on quantity change
+        product.stock -= diff; // If diff < 0, this increases stock
+        await product.save();
+
+        // Update cart item
+        await CartProductModel.updateOne({ _id }, { quantity: newQty });
 
         return response.json({
-            message: "Cart item updated",
-            error: false,
+            message: "Cart item updated and stock adjusted",
             success: true,
-            data: updateCartItem
+            error: false,
+            data: { updatedQty: newQty, updatedStock: product.stock }
         });
     } catch (error) {
         return response.status(500).json({
-            message: error.message || error,
+            message: error.message || "Server error",
             error: true,
             success: false
         });
@@ -179,7 +205,7 @@ export const updateCartItemQtyController = async (request, response) => {
 
 export const deleteCartItemQtyController = async (request, response) => {
     try {
-        const userId = request.userId; // middleware
+        const userId = request.userId;
         const { _id } = request.body;
 
         if (!_id) {
@@ -190,19 +216,33 @@ export const deleteCartItemQtyController = async (request, response) => {
             });
         }
 
-        const deleteCartItem = await CartProductModel.deleteOne({ 
-            _id: _id, userId: userId 
-        });
+        const cartItem = await CartProductModel.findOne({ _id, userId });
+        if (!cartItem) {
+            return response.status(404).json({
+                message: "Cart item not found",
+                error: true,
+                success: false
+            });
+        }
+
+        const product = await ProductModel.findById(cartItem.productId);
+        if (product) {
+            // Restore stock
+            product.stock += cartItem.quantity;
+            await product.save();
+        }
+
+        await CartProductModel.deleteOne({ _id, userId });
 
         return response.json({
-            message: "Item removed from cart",
-            error: false,
+            message: "Item removed and stock restored",
             success: true,
-            data: deleteCartItem
+            error: false,
+            data: { restoredQty: cartItem.quantity, currentStock: product?.stock }
         });
     } catch (error) {
         return response.status(500).json({
-            message: error.message || error,
+            message: error.message || "Server error",
             error: true,
             success: false
         });
