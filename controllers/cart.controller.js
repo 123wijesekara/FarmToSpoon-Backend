@@ -1,6 +1,7 @@
-import CartProductModel from '../models/cartproduct.model.js';
+ 
 import UserModel from '../models/user.model.js';
 import ProductModel from '../models/product.model.js';
+import CarProductModel from '../models/cartproduct.model.js';
 export const addToCartItemController = async (request, response) => {
     try {
         const userId = request.userId;
@@ -15,7 +16,7 @@ export const addToCartItemController = async (request, response) => {
         }
         
         // Check if product is already in the cart
-        const checkProduct = await CartProductModel.findOne({
+        const checkProduct = await CarProductModel.findOne({
             userId: userId,
             productId: productId
         });
@@ -29,7 +30,7 @@ export const addToCartItemController = async (request, response) => {
         }
 
         // Add new item to cart
-        const cartItem = new CartProductModel({
+        const cartItem = new CarProductModel({
             quantity: 1,
             userId: userId,
             productId: productId
