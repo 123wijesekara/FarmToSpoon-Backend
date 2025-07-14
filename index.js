@@ -67,7 +67,7 @@ app.use('/api/product',productRouter)
 app.use('/api/cart',cartRouter)
 app.use("/api/address",addressRouter)
 app.use("/api/order",orderRouter)
-app.use("/api/rate",ratingRouter)
+app.use("/api/ratings",ratingRouter)
 connectDB()
 
 
