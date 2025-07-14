@@ -15,11 +15,23 @@ import productRouter from './route/product.route.js'
 import cartRouter from './route/cart.route.js'
 import addressRouter from './route/address.route.js'
 import orderRouter from './route/order.route.js'
+import http from 'http';
+import { Server } from 'socket.io';
 import ratingRouter from './route/Rating.route.js'
- 
-
 
 const app = express()
+const server = http.createServer(app);
+
+
+
+const io = new Server(server, {
+    cors: {
+      origin: process.env.FRONTEND_URL || "http://localhost:5173",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
+
 
 app.use(cors({
     creadentials :true,
@@ -36,6 +48,12 @@ app.use(helmet({
 
 const PORT =8080 || process.env.PORT
 
+
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+  });
+
 app.get("/",(request,response)=>{
     response.json({
         message:"Server is running"
@@ -49,8 +67,25 @@ app.use('/api/product',productRouter)
 app.use('/api/cart',cartRouter)
 app.use("/api/address",addressRouter)
 app.use("/api/order",orderRouter)
-app.use("/api/ratings",ratingRouter)
+app.use("/api/rate",ratingRouter)
 connectDB()
+
+
+
+
+io.on('connection', (socket) => {
+    console.log("Client connected:", socket.id);
+   
+    socket.on("joinRoom", (userId) => {
+      socket.join(userId);
+      console.log(`Socket ${socket.id} joined room ${userId}`);
+    });
+   
+    socket.on('disconnect', () => {
+      console.log("Client disconnected:", socket.id);
+    });
+  });
+
 
 app.listen(PORT,()=>{
     console.log("Server is running",PORT)
