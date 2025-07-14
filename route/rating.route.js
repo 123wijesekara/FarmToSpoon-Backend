@@ -1,7 +1,6 @@
 import {Router} from 'express';
- 
-import { getratings, rating } from '../controllers/rating.controller.js';
- 
+import auth from '../middleware/auth.js';
+import { getratings, rating } from '../controllers/rating.js';
  
 
 const ratingRouter = Router()
