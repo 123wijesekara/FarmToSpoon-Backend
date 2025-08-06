@@ -733,6 +733,7 @@ export async function loginController(request, response) {
         response.cookie("accessToken", accessToken, cookiesOption);
         response.cookie("refreshToken", refreshToken, cookiesOption);
         response.cookie("userId", user._id.toString(), cookiesOption);
+        response.cookie("name", user.name, cookiesOption);
         return response.json({
             message: "Login successfully",
             error: false,
@@ -742,6 +743,7 @@ export async function loginController(request, response) {
                 accessToken,
                 refreshToken,
                 userId: user._id,
+                name: user.name,
             },
         });
        

@@ -310,63 +310,88 @@
 import { request, response } from "express";
 import ProductModel from "../models/product.model.js";
 import CartProductModel from "../models/cartproduct.model.js";
+import RatingModel from "../models/rating.model.js";
+import mongoose from 'mongoose';
+import UserModel from "../models/user.model.js";
 
 export const createProductController = async (request, response) => {
-    try {
-      const {
-        name,
-        location,
-        image,
-        category,
-        subCategory,
-        unit,
-        stock,
-        price,
-        discount,
-        description,
-        more_details,
-        userId, 
-      } = request.body;
-  
-      if (!name || !location|| !image[0] || !category[0] || !subCategory[0] || !unit || !price || !description || !userId) {
-        return response.status(400).json({
-          message: "Enter required fields",
-          error: true,
-          success: false,
-        });
-      }
-  
-      const product = new ProductModel({
-        name,
-        location,
-        image,
-        category,
-        subCategory,
-        unit,
-        stock,
-        price,
-        discount,
-        description,
-        more_details,
-        userId, 
-      });
-  
-      const saveProduct = await product.save();
-  
-      return response.json({
-        message: "Product created successfully",
-        data: saveProduct,
-        error: false,
-        success: true,
-      });
-    } catch (error) {
-      return response.status(500).json({
-        message: error.message || error,
+  try {
+    const userId = request.userId; // Assuming set by auth middleware
+
+    const user = await UserModel.findById(userId).lean();
+    if (!user) {
+      return response.status(404).json({
+        message: "User not found",
         error: true,
         success: false,
       });
     }
-  };
+
+    const {
+      name,
+      location,
+      image,
+      category,
+      subCategory,
+      unit,
+      stock,
+      price,
+      discount,
+      description,
+    } = request.body;
+
+    console.log("Received data:", request.body);
+
+    // Validating required fields
+    if (
+      !name ||
+      !location ||
+      !image?.[0] ||
+      !category?.[0] ||
+      !subCategory?.[0] ||
+      !unit ||
+      !price ||
+      !description
+    ) {
+      return response.status(400).json({
+        message: "Enter required fields",
+        error: true,
+        success: false,
+      });
+    }
+
+    const product = new ProductModel({
+      name,
+      location,
+      image,
+      category,
+      subCategory,
+      unit,
+      stock,
+      price,
+      discount,
+      description,
+      userId,             
+      username: user.name  
+    });
+
+    const saveProduct = await product.save();
+
+    return response.json({
+      message: "Product created successfully",
+      data: saveProduct,
+      error: false,
+      success: true,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+};
+
 
 //   export const getProductController = async (request, response) => {
 //     try {
@@ -484,7 +509,7 @@ export const getProductController = async (request, response) => {
               
             },
           
-            userId,  
+            userId,
           }
         : { userId }; // Filter by userId if no search term
   
@@ -647,12 +672,12 @@ export const getProductController = async (request, response) => {
 
  
 
-export const getProductByCategory = async (request, response) => {
+export const getProductByCategory = async (req, res) => {
   try {
-    const { id, sortBy, sortOrder, district, searchTerm } = request.body;
+    const { id, sortBy, sortOrder, district, searchTerm } = req.body;
 
     if (!id) {
-      return response.status(400).json({
+      return res.status(400).json({
         message: "Provide category id",
         error: true,
         success: false,
@@ -660,7 +685,6 @@ export const getProductByCategory = async (request, response) => {
     }
 
     // Step 1: Build base query
-    
     const query = {
       category: { $in: id },
     };
@@ -685,7 +709,7 @@ export const getProductByCategory = async (request, response) => {
         }
       }
     ]);
-    // console.log("Cart Items Aggregated:", JSON.stringify(cartItems, null, 2));
+
     // Step 4: Prepare a Set of productIds to exclude
     const excludeProductIds = new Set();
 
@@ -695,7 +719,6 @@ export const getProductByCategory = async (request, response) => {
       for (const cartItem of cartItems) {
         const cartProductIdStr = cartItem._id.productId.toString();
 
-           // Changed logic: only exclude if product stock is 0
         if (productIdStr === cartProductIdStr && product.stock <= 0) {
           excludeProductIds.add(productIdStr);
           break;
@@ -705,7 +728,8 @@ export const getProductByCategory = async (request, response) => {
 
     // Step 5: Filter products
     products = products.filter(
-      (product) => !excludeProductIds.has(product._id.toString()) && product.stock > 0
+      (product) =>
+        !excludeProductIds.has(product._id.toString()) && product.stock > 0
     );
 
     // Step 6: Sort
@@ -724,25 +748,54 @@ export const getProductByCategory = async (request, response) => {
       });
     }
 
+    // Step 6.5: Attach average ratings
+    const productIds = products.map(p => p._id);
+    const ratingData = await RatingModel.aggregate([
+      { $match: { productId: { $in: productIds } } },
+      {
+        $group: {
+          _id: "$productId",
+          avgRating: { $avg: "$rating" },
+          ratingCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const ratingMap = new Map();
+    ratingData.forEach(r => {
+      ratingMap.set(r._id.toString(), {
+        avgRating: r.avgRating,
+        ratingCount: r.ratingCount,
+      });
+    });
+
+    products = products.map(p => {
+      const rating = ratingMap.get(p._id.toString());
+      return {
+        ...p.toObject(),
+        avgRating: rating?.avgRating || 0,
+        ratingCount: rating?.ratingCount || 0,
+      };
+    });
+
     // Step 7: Limit to 15
     products = products.slice(0, 15);
 
-    return response.json({
-      message: "Category product list",
+    return res.json({
+      message: "Category product list with ratings",
       data: products,
       error: false,
       success: true,
     });
   } catch (error) {
     console.error("Error in getProductByCategory:", error);
-    return response.status(500).json({
+    return res.status(500).json({
       message: error.message || error,
       error: true,
       success: false,
     });
   }
 };
-
 
 export const getProductCategoryAndSubCategory = async(request,response)=>{
     try{
@@ -832,36 +885,58 @@ export const getProductCategoryAndSubCategory = async(request,response)=>{
 //   };
 export const getProductDetails = async (request, response) => {
   try {
-    const { productId, userId } = request.body; // Add userId to the request body
+    const { productId, userId } = request.body;
 
     console.log("Received Product ID:", productId);
     console.log("Received User ID:", userId);
 
-    // Check if productId and userId are provided
-    if (!productId || !userId) {
+    // Validate productId
+    if (!productId) {
       return response.status(400).json({
-        message: "ProductId and userId are required",
+        message: "ProductId is required",
         error: true,
         success: false,
       });
     }
 
-   
-    const product = await ProductModel.findOne({ _id: productId, _id:userId });  
+    // Fetch the product by ID
+    const product = await ProductModel.findById(productId);
 
-    // Check if product is found
     if (!product) {
       return response.status(404).json({
-        message: "Product not found or you don't have permission to view it",
+        message: "Product not found",
         error: true,
         success: false,
       });
     }
 
-    // Send product details as response
+    // Aggregate average rating and rating count for this product
+    const ratingStats = await RatingModel.aggregate([
+      { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+      {
+        $group: {
+          _id: "$productId",
+          avgRating: { $avg: "$rating" },
+          ratingCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    let avgRating = 0;
+    let ratingCount = 0;
+    if (ratingStats.length > 0) {
+      avgRating = ratingStats[0].avgRating;
+      ratingCount = ratingStats[0].ratingCount;
+    }
+
+    // Send product details with ratings
     return response.json({
       message: "Product details fetched successfully",
-      data: product,
+      data: {
+        ...product.toObject(),
+        avgRating,
+        ratingCount,
+      },
       error: false,
       success: true,
     });

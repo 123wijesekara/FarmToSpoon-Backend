@@ -16,7 +16,7 @@ const orderSchema = new mongoose.Schema({
     Email:{
         type:String
     },
-    PhoneNo:{
+    mobile:{
         type:Number
     },
     product_details: {
