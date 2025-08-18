@@ -4,15 +4,12 @@ import UserModel from "../models/user.model.js";
 export const addAddressController = async (request, response) => {
     try {
          const userId = request.userId
-        const { address_line, city, state, pincode, country, mobile } = request.body
-     
+        const { address_line, city,  mobile } = request.body
+   
        
         const createAddress = new AddressModel({
             address_line,
             city,
-            state,
-            country,
-            pincode,
             mobile
         })
         const saveAddress = await createAddress.save()
@@ -26,7 +23,7 @@ export const addAddressController = async (request, response) => {
  return response.json({
     message:"Address Created Successfully",
     error :false,
-    success:ture,
+    success:true,
     data :saveAddress
 
  })
@@ -67,14 +64,12 @@ export const updateAdddressController = async (request, response) => {
 
     try {
         const userId = request.userId
-         const { _id,address_line, city, state, pincode, country, mobile } = request.body
+         const { _id,address_line, city, mobile } = request.body
  
         const updateAddress = await AddressModel.updateOne({_id:_id,userId : userId},{ 
             address_line,
             city,
-            state,
-            pincode,
-            country,
+ 
             mobile
         })
          return response.json({

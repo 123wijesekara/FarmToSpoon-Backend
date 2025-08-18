@@ -147,6 +147,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: [true, "Provide password"] },
     avatar: { type: String, default: "" },
     mobile: { type: Number },
+    district:{type:String},
     refresh_token: { type: String, default: "" },
     verify_email: { type: Boolean, default: false },
     last_login_date: { type: Date, default: "" },
@@ -160,6 +161,9 @@ const userSchema = new mongoose.Schema({
         enum: ["ADMIN", "FARMER", "USER"],
         default: "USER"
     },
+
+    farmerId: { type: String, unique: true },
+    
     address_details: [{ type: mongoose.Schema.ObjectId, ref: 'address' }],
     shopping_cart: [{ type: mongoose.Schema.ObjectId, ref: 'cartProduct' }],
     orderHistory: [{ type: mongoose.Schema.ObjectId, ref: 'order' }],

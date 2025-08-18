@@ -531,15 +531,32 @@ export async function registerUserController(request, response) {
         const salt = await bcryptjs.genSalt(10);
         const hashedPassword = await bcryptjs.hash(password, salt);
 
-        // Create new user
+        // Create new user object
         const newUser = new UserModel({
             name,
             email,
             password: hashedPassword,
-            mobile:phone, // Store phone
-            district, // Store district
-            role, // Store role as 'user' or 'admin'
+            mobile: phone,
+            district,
+            role,
         });
+
+ 
+        if (role === "FARMER") {
+            const lastFarmer = await UserModel.findOne({ role: "FARMER" })
+                .sort({ createdAt: -1 }) // Get the latest farmer
+                .select("farmerId");
+
+            let newFarmerId = "FARMER001";
+
+            if (lastFarmer && lastFarmer.farmerId) {
+                const lastNumber = parseInt(lastFarmer.farmerId.replace("FARMER", ""));
+                const nextNumber = lastNumber + 1;
+                newFarmerId = `FARMER${String(nextNumber).padStart(3, "0")}`;
+            }
+
+            newUser.farmerId = newFarmerId;
+        }
 
         // Save user to DB
         const savedUser = await newUser.save();
@@ -1162,3 +1179,151 @@ return response.status(500).json({
     
 }
 
+
+export async function getAllFarmersController(req, res) {
+    try {
+      // Fetch only FARMER role users
+      const farmers = await UserModel.find({ role: "FARMER" })
+        .select("farmerId name mobile district avatar status"); // choose fields to send
+  
+      if (!farmers || farmers.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          message: "No farmers found"
+        });
+      }
+  
+      // Format data for frontend
+      const formattedFarmers = farmers.map(farmer => ({
+        farmerId: farmer.farmerId,
+        name: farmer.name,
+        image: farmer.avatar || "",    
+        district: farmer.district || "",  
+        contact: farmer.mobile || "",  
+        status: farmer.status ||""
+                  
+      }));
+  console.log("response",formattedFarmers)
+      return res.json({
+        success: true,
+        data: formattedFarmers,
+      });
+  
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: true,
+        message: error.message || "Error fetching farmers",
+      });
+    }
+  }
+
+ 
+  export const getFarmerById = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      // Validate ID exists
+      if (!id) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Farmer ID is required" 
+        });
+      }
+  
+      // Find by farmerId instead of _id
+      const farmer = await UserModel.findOne({ farmerId: id })
+        .select('-password -refresh_token');
+  
+      if (!farmer) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Farmer not found" 
+        });
+      }
+  
+      // Verify the user is actually a farmer
+      if (farmer.role !== "FARMER") {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Requested user is not a farmer" 
+        });
+      }
+  
+      console.log("Retrieved farmer:", farmer);
+      res.json({ 
+        success: true, 
+        farmer 
+      });
+  
+    } catch (error) {
+      console.error("Error in getFarmerById:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Internal server error",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  };
+ 
+  export const deleteFarmer = async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log("id", id);
+  
+      if (!id) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Farmer ID is required" 
+        });
+      }
+  
+      // Find the farmer by farmerId first
+      const farmer = await UserModel.findOne({ farmerId: id });
+      
+      if (!farmer || farmer.role !== "FARMER") {
+        return res.status(404).json({ success: false, message: "Farmer not found" });
+      }
+  
+      // Delete using the _id we found
+      await UserModel.findByIdAndDelete(farmer._id);
+  
+      res.json({ success: true, message: "Farmer deleted" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  };
+
+  export const suspendFarmer = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      if (!id) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Farmer ID is required" 
+        });
+      }
+  
+      const farmer = await UserModel.findOne({ farmerId: id });
+  
+      if (!farmer || farmer.role !== "FARMER") {
+        return res.status(404).json({ success: false, message: "Farmer not found" });
+      }
+  
+      // Update status using the enum values
+      farmer.status = farmer.status === 'Suspended' ? 'Active' : 'Suspended';
+      await farmer.save();
+  
+      res.json({ 
+        success: true, 
+        farmer, 
+        message: `Farmer ${farmer.status === 'Suspended' ? 'suspended' : 'activated'}` 
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+};

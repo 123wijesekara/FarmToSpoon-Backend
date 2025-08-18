@@ -60,10 +60,10 @@ const data =await subCategoryModel.find().sort({createdAt: -1}).populate('catego
 export const updateSubCategoryController= async(request,response)=>{
     try{
      const {_id,name,image,category} = request.body
-
+console.log("Id....................",_id)
  const checkSub = await subCategoryModel.findById(_id)
 
- if(checkSub){
+ if(!checkSub){
     return response.status(400).json({
         message :"Check your _id",
         error: true,

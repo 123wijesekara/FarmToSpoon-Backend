@@ -8,9 +8,9 @@ import CartProductModel from "../models/cartproduct.model.js";
 
   export async function CashOnDeliveryOrderController(request,response){
     try{
-        const userId = request.userId
+        
       
-  const {list_items,totalAmt,addressId,subTotalAmt}=request.body
+  const {userId,list_items,totalAmt,addressId,subTotalAmt}=request.body
    
 //   console.log("list_items",list_items)
 //     console.log("totalAmt",totalAmt)
@@ -45,7 +45,9 @@ if (!user) {
     delivery_address: addressId,
     subTotalAmt: subTotalAmt,
     totalAmt : totalAmt,
+    UserId:userId,
     userName: user.name, 
+    userId:user.userId,
     Email:user.email,
     mobile:user.mobile
     
@@ -217,9 +219,11 @@ export const pricewithDiscount = (price,dis = 1)=>{
 export async function getOrderDetailsController(request,response) {
    
     try{
-const userId = request.userId
-const orderlist = await OrderModel.find({userId: userId}).sort({createdAt:-1}).populate('delivery_address')
+const { userId } = request.body;  
+
  
+const orderlist = await OrderModel.find({UserId: userId}).sort({createdAt:-1}).populate('delivery_address')
+console.log("orderlist",orderlist)
 return response.json({
     message:"order list",
     data:orderlist,
@@ -274,7 +278,7 @@ export async function getFarmerOrdersController(req, res) {
   export async function getBuyerOrdersController(req, res) {
     try {
       const buyerId = req.userId;
-  
+  console.log("buyer id",buyerId);
       // Find orders placed by the logged-in buyer
       const buyerOrders = await OrderModel.find({ userId: buyerId })
         .sort({ createdAt: -1 })
