@@ -503,10 +503,11 @@ import generatedRefreshToken from "../utils/generatedRefreshToken.js";
 import uploadImageClodinary from "../utils/uploadImageClodinary.js";
 import generatedOtp from "../utils/generatedOtp.js";
 import forgotPasswordTemplate from "../utils/forgotPassowordTemplate.js";
+import AddressModel from "../models/address.model.js";
 
 export async function registerUserController(request, response) {
     try {
-        const { name, email, password, phone, district, role } = request.body;  
+        const { name, email, password, phone, district,address_line, role ,distribution_location} = request.body;  
      
         // Role validation
         if (!role || !["ADMIN", "FARMER", "USER"].includes(role)) {
@@ -538,7 +539,9 @@ export async function registerUserController(request, response) {
             password: hashedPassword,
             mobile: phone,
             district,
+            
             role,
+            distribution_location
         });
 
  
@@ -561,6 +564,22 @@ export async function registerUserController(request, response) {
         // Save user to DB
         const savedUser = await newUser.save();
 
+        if (address_line && district && phone) {
+            const createAddress = new AddressModel({
+              address_line,
+              city:district,
+              mobile: phone,
+            });
+      
+            const saveAddress = await createAddress.save();
+      
+            await UserModel.findByIdAndUpdate(savedUser._id, {
+              $push: {
+                address_details: saveAddress._id,
+              },
+            });
+          }
+
         // Send email verification
         const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${savedUser._id}`;
         const verifyEmail = await sendEmail({
@@ -569,6 +588,7 @@ export async function registerUserController(request, response) {
             html: verifyEmailTemplate({ name, url: verifyEmailUrl }),
         });
 
+        
         return response.json({
             message: "User registered successfully",
             error: false,
@@ -588,6 +608,7 @@ export async function registerUserController(request, response) {
 export async function verifyEmailController(request, response) {
     try {
         const { code } = request.body;
+     
         const user = await UserModel.findOne({ _id: code });
 
         if (!user) {
@@ -712,6 +733,17 @@ export async function loginController(request, response) {
                 message: "User not registered",
                 error: true,
                 success: false,
+            });
+        }
+
+
+        if (!user.verify_email) {
+            return response.status(403).json({
+                message: "Please verify your email ",
+                error: true,
+                success: false,
+                unverified: true, 
+                userId: user._id  
             });
         }
 

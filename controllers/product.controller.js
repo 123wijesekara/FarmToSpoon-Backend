@@ -316,7 +316,7 @@ import UserModel from "../models/user.model.js";
 
 export const createProductController = async (request, response) => {
   try {
-    const userId = request.userId; // Assuming set by auth middleware
+    const userId = request.userId;  
 
     const user = await UserModel.findById(userId).lean();
     if (!user) {
@@ -338,6 +338,7 @@ export const createProductController = async (request, response) => {
       price,
       discount,
       description,
+      
     } = request.body;
 
     console.log("Received data:", request.body);

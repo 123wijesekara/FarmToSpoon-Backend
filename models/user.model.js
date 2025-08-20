@@ -148,6 +148,7 @@ const userSchema = new mongoose.Schema({
     avatar: { type: String, default: "" },
     mobile: { type: Number },
     district:{type:String},
+    distribution_location:{type:String},
     refresh_token: { type: String, default: "" },
     verify_email: { type: Boolean, default: false },
     last_login_date: { type: Date, default: "" },

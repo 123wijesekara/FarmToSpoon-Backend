@@ -60,7 +60,7 @@ const data =await subCategoryModel.find().sort({createdAt: -1}).populate('catego
 export const updateSubCategoryController= async(request,response)=>{
     try{
      const {_id,name,image,category} = request.body
-console.log("Id....................",_id)
+ 
  const checkSub = await subCategoryModel.findById(_id)
 
  if(!checkSub){
@@ -96,8 +96,8 @@ console.log("Id....................",_id)
 export const deleteSubCategoryController =async(request,response)=>{
     try{
         const {_id} =request.body
-        console.log("Id",_id)
-const deleteSub = await subCategoryModel.findIdAndDelete(_id)
+       
+const deleteSub = await subCategoryModel.findByIdAndDelete(_id)
 
 return response.json({
     message:"Delete successfully",

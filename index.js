@@ -18,6 +18,7 @@ import orderRouter from './route/order.route.js'
 import http from 'http';
 import { Server } from 'socket.io';
 import ratingRouter from './route/Rating.route.js'
+import Salesrouter from './route/sales.route.js'
 
 const app = express()
 const server = http.createServer(app);
@@ -68,6 +69,7 @@ app.use('/api/cart',cartRouter)
 app.use("/api/address",addressRouter)
 app.use("/api/order",orderRouter)
 app.use("/api/ratings",ratingRouter)
+app.use('/api/report',Salesrouter)
 connectDB()
 
 

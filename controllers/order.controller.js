@@ -245,7 +245,7 @@ export async function getFarmerOrdersController(req, res) {
   
     try {
       const farmerId = req.userId;
-  console.log("famer id",farmerId);
+   
       // Get product IDs owned by this farmer
       const farmerProducts = await ProductModel.find({ userId: farmerId }, "_id");
       const farmerProductIds = farmerProducts.map(p => new mongoose.Types.ObjectId(p._id));
@@ -278,9 +278,9 @@ export async function getFarmerOrdersController(req, res) {
   export async function getBuyerOrdersController(req, res) {
     try {
       const buyerId = req.userId;
-  console.log("buyer id",buyerId);
+   
       // Find orders placed by the logged-in buyer
-      const buyerOrders = await OrderModel.find({ userId: buyerId })
+      const buyerOrders = await OrderModel.find({ UserId: buyerId })
         .sort({ createdAt: -1 })
        
         .lean();
