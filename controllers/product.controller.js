@@ -316,7 +316,7 @@ import UserModel from "../models/user.model.js";
 
 export const createProductController = async (request, response) => {
   try {
-    const userId = request.userId;  
+    const userId = request.userId;
 
     const user = await UserModel.findById(userId).lean();
     if (!user) {
@@ -333,23 +333,24 @@ export const createProductController = async (request, response) => {
       image,
       category,
       subCategory,
-      unit,
+      unitType,  // "Unit" or "Kg"
+      unit,      // the quantity
       stock,
       price,
       discount,
       description,
-      
+      more_details
     } = request.body;
 
     console.log("Received data:", request.body);
 
-    // Validating required fields
     if (
       !name ||
       !location ||
       !image?.[0] ||
       !category?.[0] ||
       !subCategory?.[0] ||
+      !unitType ||
       !unit ||
       !price ||
       !description
@@ -367,13 +368,14 @@ export const createProductController = async (request, response) => {
       image,
       category,
       subCategory,
-      unit,
+      unit: `${unit} ${unitType}`, 
       stock,
       price,
       discount,
       description,
-      userId,             
-      username: user.name  
+      more_details,
+      userId,
+      username: user.name
     });
 
     const saveProduct = await product.save();
@@ -392,6 +394,7 @@ export const createProductController = async (request, response) => {
     });
   }
 };
+
 
 
 //   export const getProductController = async (request, response) => {
