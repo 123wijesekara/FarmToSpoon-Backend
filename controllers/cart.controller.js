@@ -14,7 +14,7 @@ export const addToCartItemController = async (request, response) => {
             });
         }
 
-        // Check if product is already in the cart
+        
         const checkProduct = await CartProductModel.findOne({
             userId: userId,
             productId: productId

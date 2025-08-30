@@ -933,7 +933,7 @@ export const getProductDetails = async (request, response) => {
       ratingCount = ratingStats[0].ratingCount;
     }
 
-    // Send product details with ratings
+     
     return response.json({
       message: "Product details fetched successfully",
       data: {
