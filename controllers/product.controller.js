@@ -646,7 +646,7 @@ export const getProductController = async (request, response) => {
 //     };
 
 //     if (district) {
-//       query.location = district; // adjust if your field is named differently
+//       query.location = district;  
 //     }
 
 //     if (searchTerm && searchTerm.trim() !== '') {

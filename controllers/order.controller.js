@@ -5,81 +5,91 @@ import ProductModel from '../models/product.model.js';
 import { updateUserDetails } from './user.controller.js';
 import Stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartproduct.model.js";
-
-  export async function CashOnDeliveryOrderController(request,response){
-    try{
-        
-      
-  const {userId,list_items,totalAmt,addressId,subTotalAmt}=request.body
-   
-//   console.log("list_items",list_items)
-//     console.log("totalAmt",totalAmt)
-//     console.log("addressId",addressId)
-//     console.log("subTotal",subTotalAmt)
-const user = await UserModel.findById(userId).lean();
-
+ import sendEmail from "../config/sendEmail.js";
  
-if (!user) {
-  return response.status(404).json({
-    message: "User not found",
-    success: false,
-    error: true,
-  });
-}
-    const playload =list_items.map(el=>{
-        return({
 
-    
-   
-    orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-    productId:el.productId._id,
-    product_details: {
-        _id: el.productId._id, 
-        name :el.productId.name,
-        image :el.productId.image,
-        userId: el.productId.userId,
-        
-    },
-    paymentId: "",
-    payment_status:"CASH ON DELIVERY",
-    delivery_address: addressId,
-    subTotalAmt: subTotalAmt,
-    totalAmt : totalAmt,
-    UserId:userId,
-    userName: user.name, 
-    userId:user.userId,
-    Email:user.email,
-    mobile:user.mobile
-    
-        })
-    })
+export async function CashOnDeliveryOrderController(request, response) {
+  try {
+    const { userId, list_items, totalAmt, addressId, subTotalAmt } = request.body;
 
-    const generatedOrder = await OrderModel.insertMany(playload)
-//remove from the cart
-    const  removeCartItems = await CartProductModel.deleteMany({userId :userId})
-    const updateInUser = await UserModel.updateOne({_id :userId},{shopping_cart:[]})
+    const user = await UserModel.findById(userId).lean();
+    if (!user) {
+      return response.status(404).json({
+        message: "User not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const playload = list_items.map((el) => {
+      return {
+        orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+        productId: el.productId._id,
+        product_details: {
+          _id: el.productId._id,
+          name: el.productId.name,
+          image: el.productId.image,
+          userId: el.productId.userId,
+        },
+        paymentId: "",
+        payment_status: "CASH ON DELIVERY",
+        delivery_address: addressId,
+        subTotalAmt: subTotalAmt,
+        totalAmt: totalAmt,
+        UserId: userId,
+        userName: user.name,
+        userId: user.userId,
+        Email: user.email,
+        mobile: user.mobile,
+      };
+    });
+
+    const generatedOrder = await OrderModel.insertMany(playload);
+
+    // Remove from the cart
+    await CartProductModel.deleteMany({ userId: userId });
+    await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
+
+    /** ---------------------------
+     * SEND ORDER CONFIRMATION EMAIL
+     * --------------------------- */
+    await sendEmail({
+      name: user.name,
+      sendTo: user.email, // send to user's email
+      subject: "Order Confirmation - Farm To Spoon",
+      html: `
+        <h2>Hi ${user.name},</h2>
+        <p>Thank you for your order!</p>
+        <p>Your order has been placed successfully.</p>
+        <p><b>Order ID:</b> ${generatedOrder[0].orderId}</p>
+        <p><b>Total Amount:</b> Rs. ${totalAmt}</p>
+        <p>We’ll notify you once it’s ready for pickup 🚚</p>
+        <br/>
+          <p>Thank you for shopping with us!</p>
+      `,
+    });
 
     return response.json({
-        message:"Order  Successfully",
-        error:false,
-        success:true,
-        data:generatedOrder
-    })
-}catch(error){
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-            
-        })   
-}
+      message: "Order placed successfully & email sent",
+      error: false,
+      success: true,
+      data: generatedOrder,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
 }
 
-export const pricewithDiscount = (price,dis = 1)=>{
-    const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
-    const actualPrice = Number(price) - Number(discountAmout)
-    return actualPrice
-}
+// Discount Utility
+export const pricewithDiscount = (price, dis = 1) => {
+  const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100);
+  const actualPrice = Number(price) - Number(discountAmout);
+  return actualPrice;
+};
 
 // export async function paymentController(request,response){
 //    try {
@@ -246,12 +256,12 @@ export async function getFarmerOrdersController(req, res) {
     try {
       const farmerId = req.userId;
    
-      // Get product IDs owned by this farmer
+ 
       const farmerProducts = await ProductModel.find({ userId: farmerId }, "_id");
       const farmerProductIds = farmerProducts.map(p => new mongoose.Types.ObjectId(p._id));
 
   
-      // Find orders that include these products
+      
       const farmerOrders = await  OrderModel.find({ "product_details._id": { $in: farmerProductIds.map(id => id.toString()) } })
 
       .sort({ createdAt: -1 })
@@ -279,7 +289,7 @@ export async function getFarmerOrdersController(req, res) {
     try {
       const buyerId = req.userId;
    
-      // Find orders placed by the logged-in buyer
+      
       const buyerOrders = await OrderModel.find({ UserId: buyerId })
         .sort({ createdAt: -1 })
        
@@ -304,43 +314,144 @@ export async function getFarmerOrdersController(req, res) {
 
  
 
-  export async function updateOrderStatusController(req, res) {
-    try {
-      const { orderId, status } = req.body;
+//   export async function updateOrderStatusController(req, res) {
+//     try {
+//       const { orderId, status } = req.body;
   
-      if (!orderId || !status) {
-        return res.status(400).json({
-          message: "Order ID and new status are required",
-          success: false,
-          error: true,
-        });
-      }
+//       if (!orderId || !status) {
+//         return res.status(400).json({
+//           message: "Order ID and new status are required",
+//           success: false,
+//           error: true,
+//         });
+//       }
   
-      const updated = await OrderModel.findOneAndUpdate(
-        { _id: orderId }, 
-        { status },
-        { new: true }
-      );
+//       const updated = await OrderModel.findOneAndUpdate(
+//         { _id: orderId }, 
+//         { status },
+//         { new: true }
+//       );
   
-      if (!updated) {
-        return res.status(404).json({
-          message: "Order not found",
-          success: false,
-          error: true,
-        });
-      }
+//       if (!updated) {
+//         return res.status(404).json({
+//           message: "Order not found",
+//           success: false,
+//           error: true,
+//         });
+//       }
   
-      return res.json({
-        message: "Order status updated",
-        success: true,
-        error: false,
-      });
-    } catch (err) {
-      return res.status(500).json({
-        message: err.message || err,
+//       return res.json({
+//         message: "Order status updated",
+//         success: true,
+//         error: false,
+//       });
+//     } catch (err) {
+//       return res.status(500).json({
+//         message: err.message || err,
+//         success: false,
+//         error: true,
+//       });
+//     }
+//   }
+  
+ 
+
+export async function updateOrderStatusController(req, res) {
+  try {
+    const { orderId, status } = req.body;
+
+    if (!orderId || !status) {
+      return res.status(400).json({
+        message: "Order ID and new status are required",
         success: false,
         error: true,
       });
     }
+
+    const allowedStatuses = [
+      "pending",
+      "processing",
+      "shipped",
+      "ready_to_pick",
+      "delivered",
+      "cancelled",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: true,
+        message: "Invalid order status",
+      });
+    }
+
+    // Update order
+    const updatedOrder = await OrderModel.findOneAndUpdate(
+      { _id: orderId },
+      { status },
+      { new: true }
+    ).populate("delivery_address");
+
+    if (!updatedOrder) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const recipientEmail = updatedOrder.delivery_address?.email || updatedOrder.Email;
+
+    if (recipientEmail) {
+      let statusMessage = "";
+
+      switch (status) {
+        case "pending":
+        case "processing":
+        case "shipped":
+          statusMessage = `<p>Your order with ID <strong>${orderId}</strong> is now <strong>${status}</strong>.</p>`;
+          break;
+        case "ready_to_pick":
+        
+          statusMessage = `<p>Your order with ID <strong>${orderId}</strong> is <strong>${status}</strong>. You can collect it at the pickup point.</p>`;
+          break;
+          case "delivered":
+            statusMessage = `<p>Your order with ID <strong>${orderId}</strong> has been <strong>${status}</strong>. You can now rate your product and provide feedback!</p>
+                             <p><a href="" target="_blank" style="color: #2F855A; text-decoration: underline;">Click here to rate your product</a></p>`;
+            break;
+        
+        case "cancelled":
+          statusMessage = `<p>Your order with ID <strong>${orderId}</strong> has been cancelled.</p>`;
+          break;
+      }
+
+      const html = `
+        <h2>Order Status Update</h2>
+        ${statusMessage}
+        <p>Thank you for shopping with us!</p>
+      `;
+
+      await sendEmail({
+        sendTo: recipientEmail,
+        subject: `Order Status Updated: ${status}`,
+        html,
+      });
+    }
+
+    return res.json({
+      message: "Order status updated and notification sent",
+      success: true,
+      error: false,
+      data: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Update order status error:", error);
+    return res.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
   }
-  
+}
+
+ 
