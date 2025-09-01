@@ -1,5 +1,5 @@
 import {Router} from 'express'
-import { deleteFarmer, forgotPasswordController, getAllFarmersController, getFarmerById, loginController, logoutController, refreshToken, registerUserController, resetpassword, suspendFarmer, updateUserDetails, uploadAvatar, userDetails, verifyEmailController, verifyForgotPasswordOtp } from '../controllers/user.controller.js'
+import { deleteBuyer, deleteFarmer, forgotPasswordController, getAllBuyerController, getAllFarmersController, getBuyerById, getFarmerById, loginController, logoutController, refreshToken, registerUserController, resetpassword, suspendBuyer, suspendFarmer, updateUserDetails, uploadAvatar, userDetails, verifyEmailController, verifyForgotPasswordOtp } from '../controllers/user.controller.js'
 import auth from '../middleware/auth.js'
 import upload from '../middleware/multer.js'
 
@@ -19,4 +19,10 @@ userRouter.get("/get-all-farmers", getAllFarmersController);
 userRouter.post("/farmer/:id", getFarmerById);
 userRouter.delete("/farmer/:id", deleteFarmer);
 userRouter.patch("/farmer/suspend/:id", suspendFarmer);
+ 
+userRouter.get("/get-all-buyers", getAllBuyerController);
+userRouter.post("/buyer/:id", getBuyerById);
+userRouter.delete("/buyer/:id", deleteBuyer);
+userRouter.patch("/buyer/suspend/:id", suspendBuyer);
+
 export default userRouter

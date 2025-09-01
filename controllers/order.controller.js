@@ -371,9 +371,9 @@ export async function updateOrderStatusController(req, res) {
     const allowedStatuses = [
       "pending",
       "processing",
-      "shipped",
+     
       "ready_to_pick",
-      "delivered",
+      "Picked Up",
       "cancelled",
     ];
 
@@ -415,7 +415,7 @@ export async function updateOrderStatusController(req, res) {
         
           statusMessage = `<p>Your order with ID <strong>${orderId}</strong> is <strong>${status}</strong>. You can collect it at the pickup point.</p>`;
           break;
-          case "delivered":
+          case "Picked Up":
             statusMessage = `<p>Your order with ID <strong>${orderId}</strong> has been <strong>${status}</strong>. You can now rate your product and provide feedback!</p>
                              <p><a href="" target="_blank" style="color: #2F855A; text-decoration: underline;">Click here to rate your product</a></p>`;
             break;

@@ -60,7 +60,7 @@ const data =await subCategoryModel.find().sort({createdAt: -1}).populate('catego
 export const updateSubCategoryController= async(request,response)=>{
     try{
      const {_id,name,image,category} = request.body
- 
+ console.log("body",request.body)
  const checkSub = await subCategoryModel.findById(_id)
 
  if(!checkSub){

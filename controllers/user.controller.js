@@ -12,8 +12,8 @@ import AddressModel from "../models/address.model.js";
 
 export async function registerUserController(request, response) {
     try {
-        const { name, email, password, phone, district,address_line, role ,distribution_location} = request.body;  
-     
+        const { name, email, password, phone, district, address_line, role, distribution_location } = request.body;
+ 
         // Role validation
         if (!role || !["ADMIN", "FARMER", "USER"].includes(role)) {
             return response.status(400).json({
@@ -44,62 +44,72 @@ export async function registerUserController(request, response) {
             password: hashedPassword,
             mobile: phone,
             district,
-            
             role,
             distribution_location
         });
 
- 
+         
         if (role === "FARMER") {
             const lastFarmer = await UserModel.findOne({ role: "FARMER" })
-                .sort({ createdAt: -1 })  
+                .sort({ createdAt: -1 })
                 .select("farmerId");
 
             let newFarmerId = "FARMER001";
-
             if (lastFarmer && lastFarmer.farmerId) {
                 const lastNumber = parseInt(lastFarmer.farmerId.replace("FARMER", ""));
                 const nextNumber = lastNumber + 1;
                 newFarmerId = `FARMER${String(nextNumber).padStart(3, "0")}`;
             }
-
             newUser.farmerId = newFarmerId;
+        } else if (role === "USER") {
+            const lastUser = await UserModel.findOne({ role: "USER" })
+                .sort({ createdAt: -1 })
+                .select("userId");
+
+            let newUserId = "USER001";
+            if (lastUser && lastUser.userId) {
+                const lastNumber = parseInt(lastUser.userId.replace("USER", ""));
+                const nextNumber = lastNumber + 1;
+                newUserId = `USER${String(nextNumber).padStart(3, "0")}`;
+            }
+            newUser.userId = newUserId;
         }
 
         // Save user to DB
         const savedUser = await newUser.save();
 
+        // Save address if provided
         if (address_line && district && phone) {
             const createAddress = new AddressModel({
-              address_line,
-              city:district,
-              mobile: phone,
+                address_line,
+                city: district,
+                mobile: phone,
             });
-      
-            const saveAddress = await createAddress.save();
-      
-            await UserModel.findByIdAndUpdate(savedUser._id, {
-              $push: {
-                address_details: saveAddress._id,
-              },
-            });
-          }
 
-        
+            const saveAddress = await createAddress.save();
+
+            await UserModel.findByIdAndUpdate(savedUser._id, {
+                $push: {
+                    address_details: saveAddress._id,
+                },
+            });
+        }
+
+        // Send verification email
         const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${savedUser._id}`;
-        const verifyEmail = await sendEmail({
+        await sendEmail({
             sendTo: email,
             subject: "Verify your email from Farm To Spoon",
             html: verifyEmailTemplate({ name, url: verifyEmailUrl }),
         });
 
-        
         return response.json({
             message: "User registered successfully",
             error: false,
             success: true,
             data: savedUser,
         });
+
     } catch (error) {
         return response.status(500).json({
             message: error.message || error,
@@ -741,7 +751,7 @@ export async function getAllFarmersController(req, res) {
         status: farmer.status ||""
                   
       }));
-  console.log("response",formattedFarmers)
+      console.log("response",formattedFarmers)
       return res.json({
         success: true,
         data: formattedFarmers,
@@ -756,7 +766,6 @@ export async function getAllFarmersController(req, res) {
     }
   }
 
- 
   export const getFarmerById = async (req, res) => {
     try {
       const { id } = req.params;
@@ -769,9 +778,14 @@ export async function getAllFarmersController(req, res) {
         });
       }
   
-      // Find by farmerId instead of _id
+      // Find by farmerId instead of _id and populate address details
       const farmer = await UserModel.findOne({ farmerId: id })
-        .select('-password -refresh_token');
+        .select('-password -refresh_token')
+        .populate({
+          path: 'address_details',   // field in UserModel holding ObjectId refs
+          model: 'address',          // Address collection
+          select: 'address_line city mobile -_id', // select only required fields
+        });
   
       if (!farmer) {
         return res.status(404).json({ 
@@ -803,7 +817,7 @@ export async function getAllFarmersController(req, res) {
       });
     }
   };
- 
+  
   export const deleteFarmer = async (req, res) => {
     try {
       const { id } = req.params;
@@ -864,3 +878,123 @@ export async function getAllFarmersController(req, res) {
       res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
+
+
+ 
+export async function getAllBuyerController(req, res) {
+    try {
+      const users = await UserModel.find({ role: "USER" })
+        .select("userId name mobile district avatar status");
+  
+      if (!users || users.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          message: "No Buyer found"
+        });
+      }
+  
+      const formattedBuyers = users.map(user => ({
+        buyerId: user.userId,
+        name: user.name,
+        image: user.avatar || "",
+        district: user.district || "",
+        contact: user.mobile || "",
+        status: user.status || ""
+      }));
+      console.log("response",formattedBuyers)
+      return res.json({
+        success: true,
+        data: formattedBuyers,
+      });
+  
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: true,
+        message: error.message || "Error fetching buyers",
+      });
+    }
+  }
+  
+
+  export const getBuyerById = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      if (!id) {
+        return res.status(400).json({ success: false, message: "Buyer ID is required" });
+      }
+      const buyer = await UserModel.findOne({ userId: id })
+      .select('-password -refresh_token')
+      .populate({
+        path: 'address_details',   
+        model: 'address',          
+        select: 'address_line city mobile -_id', 
+      });
+      
+         
+  
+      if (!buyer) {
+        return res.status(404).json({ success: false, message: "Buyer not found" });
+      }
+  
+      if (buyer.role !== "USER") {
+        return res.status(403).json({ success: false, message: "Requested user is not a buyer" });
+      }
+  console.log("Retrieved buyer:", buyer);
+      res.json({ success: true, buyer });
+    } catch (error) {
+      console.error("Error in getBuyerById:", error);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  };
+  
+  export const deleteBuyer = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      if (!id) return res.status(400).json({ success: false, message: "Buyer ID is required" });
+  
+      const buyer = await UserModel.findOne({ userId: id });
+  
+      if (!buyer || buyer.role !== "USER") {
+        return res.status(404).json({ success: false, message: "Buyer not found" });
+      }
+  
+      await UserModel.findByIdAndDelete(buyer._id);
+  
+      res.json({ success: true, message: "Buyer deleted" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  };
+  
+  export const suspendBuyer = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      if (!id) return res.status(400).json({ success: false, message: "Buyer ID is required" });
+  
+      const buyer = await UserModel.findOne({ userId: id });
+  
+      if (!buyer || buyer.role !== "USER") {
+        return res.status(404).json({ success: false, message: "Buyer not found" });
+      }
+  
+      buyer.status = buyer.status === 'Suspended' ? 'Active' : 'Suspended';
+      await buyer.save();
+  
+      res.json({
+        success: true,
+        buyer,
+        message: `Buyer ${buyer.status === 'Suspended' ? 'suspended' : 'activated'}`
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  };
+  

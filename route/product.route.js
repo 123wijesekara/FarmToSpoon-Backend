@@ -27,6 +27,9 @@ productRouter.post("/get",auth,farmer,getProductController)
 productRouter.post("/get-product-by-category",getProductByCategory)
 productRouter.post('get-pruduct-by-category-and-subcategory',getProductCategoryAndSubCategory)
 productRouter.post('/get-product-details',getProductDetails)
+// productRouter.post('/get-farmer-details',getFarmerDetails)
+ 
+ 
 productRouter.put('/update-product-details',auth,farmer,updateProductDetails)
 productRouter.delete('/delete-product',auth,farmer,deleteProductDetails)
 productRouter.post('/search-product',searchProduct)

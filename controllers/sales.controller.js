@@ -125,7 +125,7 @@ export const getSalesReport = async (req, res) => {
       dateFilter = { $gte: startOfYear, $lte: endOfYear };
     }
 
-    // Get orders with product revenue calculation
+    
     const orders = await OrderModel.find({
       createdAt: { ...dateFilter },
       "product_details.userId": String(farmerId)
@@ -134,42 +134,42 @@ export const getSalesReport = async (req, res) => {
     const totalOrders = orders.length;
     const totalSales = orders.reduce((acc, o) => acc + (o.totalAmt || 0), 0);
     
-    // Calculate product revenue and quantities by measurement type
+    
     const productRevenue = {};
     orders.forEach(o => {
       if (o.product_details?._id) {
         const pid = o.product_details._id;
         
-        // Convert Mongoose document to plain JavaScript object to access all fields
+   
         const productDetails = o.product_details.toObject ? o.product_details.toObject() : o.product_details;
         
-        // Handle different quantity formats and measurement types
-        let quantity = 0;
-        let measurementType = 'units'; // Default measurement type
         
-        // DEBUG: Log the complete product_details structure
+        let quantity = 0;
+        let measurementType = 'units';  
+        
+         
         console.log("Complete product_details for", productDetails.name, ":", JSON.stringify(productDetails, null, 2));
         
-        // Check for all possible quantity fields in product_details
+         
         if (productDetails.unit !== undefined && productDetails.unit !== null) {
-          // Product measured in units
+          
           quantity = parseFloat(productDetails.unit) || 0;
           measurementType = 'units';
           console.log("Found unit:", productDetails.unit, "for product:", productDetails.name);
         } 
         else if (productDetails.kg !== undefined && productDetails.kg !== null) {
-          // Product measured in kg
+        
           quantity = parseFloat(productDetails.kg) || 0;
           measurementType = 'kg';
           console.log("Found kg:", productDetails.kg, "for product:", productDetails.name);
         }
         else if (productDetails.quantity !== undefined && productDetails.quantity !== null) {
-          // Product measured in quantity
+         
           quantity = parseFloat(productDetails.quantity) || 0;
           measurementType = 'units';
           console.log("Found quantity:", productDetails.quantity, "for product:", productDetails.name);
         }
-        // Check for other potential quantity fields
+        
         else if (productDetails.weight !== undefined && productDetails.weight !== null) {
           quantity = parseFloat(productDetails.weight) || 0;
           measurementType = 'kg';
@@ -192,7 +192,7 @@ export const getSalesReport = async (req, res) => {
           console.log("Available fields in product_details:", Object.keys(productDetails));
         }
         
-        // Calculate revenue using totalAmt from the order
+        
         const revenue = parseFloat(o.totalAmt) || 0;
         
         console.log("Final calculation - Order:", o.orderId, "Product:", productDetails.name, 
@@ -208,16 +208,16 @@ export const getSalesReport = async (req, res) => {
           };
         }
         
-        // Ensure we're adding the same measurement type
+       
         if (productRevenue[pid].measurementType !== measurementType) {
           console.warn(`Measurement type mismatch for product ${pid}: ${productRevenue[pid].measurementType} vs ${measurementType}`);
-          // Convert quantities to the same measurement type if needed
+          
           if (productRevenue[pid].measurementType === 'kg' && measurementType === 'units') {
-            // Convert units to kg (assuming 1 unit = 1 kg for conversion)
+         
             quantity = quantity * 1;
             measurementType = 'kg';
           } else if (productRevenue[pid].measurementType === 'units' && measurementType === 'kg') {
-            // Convert kg to units (assuming 1 kg = 1 unit for conversion)
+            
             quantity = quantity * 1;
             measurementType = 'units';
           }
@@ -228,37 +228,37 @@ export const getSalesReport = async (req, res) => {
       }
     });
 
-    // Get top products with revenue - limited to top 10
+    
     const productIds = Object.keys(productRevenue);
     let topProducts = [];
     
     if (productIds.length > 0) {
-      // First try to get product details from database to get accurate measurement types
+ 
       const productsFromDB = await ProductModel.find({
         _id: { $in: productIds }
       }).lean();
 
-      // Create a map for quick lookup
+      
       const productMap = {};
       productsFromDB.forEach(p => {
         productMap[p._id.toString()] = p;
       });
 
-      // Process each product with proper measurement types
+       
       topProducts = productIds.map(pid => {
         const dbProduct = productMap[pid];
         const revenueData = productRevenue[pid];
         
-        // Determine the correct measurement type
+         
         let measurementType = revenueData.measurementType;
         let quantityDisplay = revenueData.quantity;
         
-        // If we have product data from DB, use its measurement type
+      
         if (dbProduct && dbProduct.measurementType) {
           measurementType = dbProduct.measurementType;
         }
         
-        // Format quantity with appropriate unit
+        
         const quantityWithUnit = `${quantityDisplay} ${measurementType}`;
         console.log(`Top Product: ${dbProduct?.name || revenueData.name}, Revenue: ${revenueData.revenue}, Quantity: ${quantityWithUnit}`);
         
@@ -278,7 +278,7 @@ export const getSalesReport = async (req, res) => {
       .slice(0, 10);
     }
 
-    // Ratings
+     
     const ratings = await RatingModel.aggregate([
       {
         $lookup: {
@@ -305,7 +305,7 @@ export const getSalesReport = async (req, res) => {
       { $sort: { avgRating: -1 } }
     ]);
 
-    // Sales by date for charts
+    
     let groupByFormat = {};
     if (range === "daily") {
       groupByFormat = {
